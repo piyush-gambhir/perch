@@ -8,16 +8,15 @@ describe('mergeSettings', () => {
     expect(mergeSettings('nope')).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('keeps valid fields and falls back on invalid ones', () => {
-    expect(
-      mergeSettings({ sound: false, theme: 'dark', density: 'compact', staleDays: 14 }),
-    ).toEqual({ sound: false, confetti: true, theme: 'dark', density: 'compact', staleDays: 14 });
+  it('keeps valid fields', () => {
+    expect(mergeSettings({ theme: 'dark', staleDays: 14 })).toEqual({
+      theme: 'dark',
+      staleDays: 14,
+    });
   });
 
-  it('rejects bad theme/density values', () => {
-    const s = mergeSettings({ theme: 'neon', density: 'roomy' });
-    expect(s.theme).toBe('auto');
-    expect(s.density).toBe('comfortable');
+  it('rejects bad theme values', () => {
+    expect(mergeSettings({ theme: 'neon' }).theme).toBe('auto');
   });
 
   it('clamps stale threshold to 1–90 and rounds', () => {

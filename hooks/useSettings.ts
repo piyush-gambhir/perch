@@ -1,10 +1,9 @@
 /**
- * useSettings — loads settings from storage.sync, applies them to the document
- * (theme + density data-attributes, effect mute flags), and persists updates.
+ * useSettings — loads settings from storage.sync, applies the theme to the document,
+ * and persists updates.
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { configureEffects } from '../utils/effects';
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -31,13 +30,11 @@ export function useSettings(): UseSettings {
     return unsub;
   }, [refresh]);
 
-  // Apply settings to the page whenever they change.
+  // Apply the theme to the page whenever it changes.
   useEffect(() => {
     const root = document.documentElement;
     if (settings.theme === 'auto') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', settings.theme);
-    root.setAttribute('data-density', settings.density);
-    configureEffects({ sound: settings.sound, confetti: settings.confetti });
   }, [settings]);
 
   const update = useCallback(async (patch: Partial<Settings>) => {

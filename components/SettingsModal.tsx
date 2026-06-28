@@ -1,7 +1,7 @@
-/** Settings modal — theme, density, effects, and stale threshold. */
+/** Settings modal — theme and stale threshold. */
 
 import { useEffect } from 'react';
-import type { Density, Settings, Theme } from '../utils/settings';
+import type { Settings, Theme } from '../utils/settings';
 
 interface SettingsModalProps {
   open: boolean;
@@ -32,28 +32,6 @@ function Segmented<T extends string>({
         </button>
       ))}
     </div>
-  );
-}
-
-function Toggle({
-  checked,
-  onToggle,
-  label,
-}: {
-  checked: boolean;
-  onToggle: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      className={`toggle${checked ? ' on' : ''}`}
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={onToggle}
-    >
-      <span className="toggle-knob" />
-    </button>
   );
 }
 
@@ -96,42 +74,6 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
                 { value: 'dark', label: 'Dark' },
               ]}
               onPick={(v) => onChange({ theme: v })}
-            />
-          </div>
-
-          <div className="setting-row">
-            <div className="setting-label">Density</div>
-            <Segmented<Density>
-              value={settings.density}
-              options={[
-                { value: 'comfortable', label: 'Comfortable' },
-                { value: 'compact', label: 'Compact' },
-              ]}
-              onPick={(v) => onChange({ density: v })}
-            />
-          </div>
-
-          <div className="setting-row">
-            <div className="setting-label">
-              Close sound
-              <span className="setting-hint">Swoosh when tabs close</span>
-            </div>
-            <Toggle
-              checked={settings.sound}
-              onToggle={() => onChange({ sound: !settings.sound })}
-              label="Close sound"
-            />
-          </div>
-
-          <div className="setting-row">
-            <div className="setting-label">
-              Confetti
-              <span className="setting-hint">Burst on close</span>
-            </div>
-            <Toggle
-              checked={settings.confetti}
-              onToggle={() => onChange({ confetti: !settings.confetti })}
-              label="Confetti"
             />
           </div>
 

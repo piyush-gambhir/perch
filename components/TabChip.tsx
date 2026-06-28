@@ -1,8 +1,7 @@
 /** One tab "chip" inside a domain card: favicon, title, dupe badge, save/close. */
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { setDragTab } from '../utils/dnd';
-import { confettiFromElement, playCloseSound } from '../utils/effects';
 import { displayTitle, faviconUrl } from '../utils/format';
 import type { TabInfo } from '../utils/types';
 import { BookmarkIcon, CloseIcon } from './icons';
@@ -17,7 +16,6 @@ interface TabChipProps {
 }
 
 export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChipProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const [leaving, setLeaving] = useState(false);
 
   let label = displayTitle(tab.title || '', tab.url, domain);
@@ -32,8 +30,6 @@ export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChi
 
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (ref.current) confettiFromElement(ref.current);
-    playCloseSound();
     setLeaving(true);
     setTimeout(() => onClose(tab.url), 200);
   };
@@ -46,7 +42,6 @@ export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChi
 
   return (
     <div
-      ref={ref}
       className={`page-chip clickable${count > 1 ? ' chip-has-dupes' : ''}`}
       title={label}
       draggable

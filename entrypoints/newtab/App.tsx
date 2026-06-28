@@ -22,7 +22,6 @@ import { useDeferred } from '../../hooks/useDeferred';
 import { useSessions } from '../../hooks/useSessions';
 import { useSettings } from '../../hooks/useSettings';
 import { useTabs } from '../../hooks/useTabs';
-import { playCloseSound } from '../../utils/effects';
 import { displayTitle, friendlyDomain, getDateDisplay, getGreeting } from '../../utils/format';
 import type { DragTab } from '../../utils/dnd';
 import {
@@ -154,7 +153,6 @@ function Dashboard() {
     if (tabs.length === 0) return;
     await saveSession(groupLabel(group), tabs);
     await closeGroupTabs(group);
-    playCloseSound();
     showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
   };
@@ -169,7 +167,6 @@ function Dashboard() {
   const handleCloseAll = async () => {
     const closed = await closeTabsByUrls(realTabs.map((t) => t.url));
     await pushClosed(`${closed.length} tabs`, closed);
-    playCloseSound();
     showToast('All tabs closed. Fresh start.');
     await refresh();
   };
@@ -179,7 +176,6 @@ function Dashboard() {
     if (tabs.length === 0) return;
     await saveSession('All tabs', tabs);
     await closeTabsByUrls(realTabs.map((t) => t.url));
-    playCloseSound();
     showToast(`Stashed ${tabs.length} tabs`);
     await refresh();
   };
@@ -238,7 +234,6 @@ function Dashboard() {
   const handleCloseStale = async (tabs: TabInfo[]) => {
     const closed = await closeTabsExact(tabs.map((t) => t.url));
     await pushClosed('Stale tabs', closed);
-    playCloseSound();
     setStaleDismissed(true);
     showToast(`Closed ${closed.length} stale tab${closed.length !== 1 ? 's' : ''}`);
     await refresh();
@@ -246,7 +241,6 @@ function Dashboard() {
 
   const handleTabOutDupes = async () => {
     await closeTabOutDupes();
-    playCloseSound();
     showToast('Closed extra Perch tabs');
     await refresh();
   };
@@ -277,7 +271,6 @@ function Dashboard() {
   const handleCreateStashFromDrop = async (tab: DragTab) => {
     await saveSession(tab.title || hostOf(tab.url) || 'Stash', [tab]);
     await closeTabByUrl(tab.url);
-    playCloseSound();
     showToast('Stashed');
     await refresh();
   };

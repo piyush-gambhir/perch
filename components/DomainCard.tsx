@@ -1,7 +1,6 @@
 /** One domain group rendered as a card: title, tab/dupe badges, chips, actions. */
 
-import { useRef, useState } from 'react';
-import { confettiFromElement, playCloseSound } from '../utils/effects';
+import { useState } from 'react';
 import { friendlyDomain } from '../utils/format';
 import { duplicateInfo, uniqueByUrl } from '../utils/grouping';
 import { tabGroupColor } from '../utils/tabs';
@@ -35,7 +34,6 @@ export function DomainCard({
   onGroupInBrowser,
   onUngroup,
 }: DomainCardProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const [closing, setClosing] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -54,19 +52,16 @@ export function DomainCard({
   const title = isLanding ? 'Homepages' : group.label || friendlyDomain(group.domain);
 
   const handleCloseGroup = () => {
-    if (ref.current) confettiFromElement(ref.current);
-    playCloseSound();
     setClosing(true);
     setTimeout(() => onCloseGroup(group), 300);
   };
 
   const handleDedup = () => {
-    playCloseSound();
     onDedup(dupeUrls);
   };
 
   return (
-    <div ref={ref} className={`mission-card domain-card${closing ? ' closing' : ''}`}>
+    <div className={`mission-card domain-card${closing ? ' closing' : ''}`}>
       <div className="mission-content">
         <div className="mission-top">
           {isNative && (
