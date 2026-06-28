@@ -1,0 +1,49 @@
+{
+  "name": "perch-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Perch — New tab page that groups your open tabs by domain and lets you close them with style.",
+  "author": "Piyush Gambhir",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run generate:icons && wxt build",
+    "build:firefox": "pnpm run generate:icons && wxt build -b firefox",
+    "compile": "tsc --noEmit",
+    "dev": "wxt --host 127.0.0.1 --port 3000",
+    "dev:firefox": "wxt -b firefox --host 127.0.0.1 --port 3000",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "generate:icons": "node ./tools/generate-icons.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "postinstall": "wxt prepare",
+    "test": "pnpm run typecheck && vitest run",
+    "typecheck": "tsc --noEmit",
+    "zip": "pnpm run generate:icons && wxt zip",
+    "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@wxt-dev/module-react": "^1.2.2",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.15",
+    "prettier": "^3.4.2",
+    "sharp": "^0.35.1",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8",
+    "wxt": "^0.20.26"
+  }
+}

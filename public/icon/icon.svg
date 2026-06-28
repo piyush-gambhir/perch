@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="2" y="2" width="124" height="124" rx="30" ry="30" fill="#18181b"/>
+  <!-- perch branch -->
+  <rect x="24" y="90" width="80" height="9" rx="4.5" fill="#ffffff"/>
+  <!-- legs -->
+  <rect x="55" y="80" width="4" height="12" rx="2" fill="#ffffff"/>
+  <rect x="67" y="80" width="4" height="12" rx="2" fill="#ffffff"/>
+  <!-- bird body + head -->
+  <circle cx="58" cy="64" r="17" fill="#ffffff"/>
+  <circle cx="77" cy="53" r="8.5" fill="#ffffff"/>
+  <!-- beak -->
+  <polygon points="85,48 95,54 85,59" fill="#a1a1aa"/>
+  <!-- eye -->
+  <circle cx="79" cy="51" r="1.8" fill="#18181b"/>
+</svg>

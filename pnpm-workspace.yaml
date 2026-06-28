@@ -1,0 +1,6 @@
+# Settings live here in pnpm v10+ (no longer the "pnpm" field in package.json).
+# allowBuilds: which dependency build scripts are permitted to run.
+allowBuilds:
+  sharp: true
+  esbuild: true
+  spawn-sync: true
