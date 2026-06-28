@@ -10,11 +10,14 @@ export type Theme = 'auto' | 'light' | 'dark';
 export interface Settings {
   theme: Theme;
   staleDays: number;
+  /** Auto-stash stale tabs on a recurring background schedule. */
+  autoStash: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   staleDays: 7,
+  autoStash: false,
 };
 
 const KEY = 'settings';
@@ -27,7 +30,8 @@ export function mergeSettings(stored: unknown): Settings {
     typeof s.staleDays === 'number' && s.staleDays >= 1 && s.staleDays <= 90
       ? Math.round(s.staleDays)
       : DEFAULT_SETTINGS.staleDays;
-  return { theme, staleDays };
+  const autoStash = typeof s.autoStash === 'boolean' ? s.autoStash : false;
+  return { theme, staleDays, autoStash };
 }
 
 export async function getSettings(): Promise<Settings> {

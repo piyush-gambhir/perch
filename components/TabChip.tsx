@@ -10,12 +10,23 @@ interface TabChipProps {
   tab: TabInfo;
   domain: string;
   count: number;
+  selected: boolean;
+  onToggleSelect: (url: string) => void;
   onFocus: (url: string) => void;
   onSave: (tab: { url: string; title: string }) => void;
   onClose: (url: string) => void;
 }
 
-export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChipProps) {
+export function TabChip({
+  tab,
+  domain,
+  count,
+  selected,
+  onToggleSelect,
+  onFocus,
+  onSave,
+  onClose,
+}: TabChipProps) {
   const [leaving, setLeaving] = useState(false);
 
   let label = displayTitle(tab.title || '', tab.url, domain);
@@ -42,7 +53,7 @@ export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChi
 
   return (
     <div
-      className={`page-chip clickable${count > 1 ? ' chip-has-dupes' : ''}`}
+      className={`page-chip clickable${count > 1 ? ' chip-has-dupes' : ''}${selected ? ' selected' : ''}`}
       title={label}
       draggable
       onDragStart={(e) => setDragTab(e.dataTransfer, { url: tab.url, title: label })}
@@ -53,6 +64,14 @@ export function TabChip({ tab, domain, count, onFocus, onSave, onClose }: TabChi
           : undefined
       }
     >
+      <input
+        type="checkbox"
+        className="tab-select"
+        checked={selected}
+        aria-label="Select tab"
+        onClick={(e) => e.stopPropagation()}
+        onChange={() => onToggleSelect(tab.url)}
+      />
       {hostname && (
         <img
           className="chip-favicon"

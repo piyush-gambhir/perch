@@ -9,9 +9,10 @@ describe('mergeSettings', () => {
   });
 
   it('keeps valid fields', () => {
-    expect(mergeSettings({ theme: 'dark', staleDays: 14 })).toEqual({
+    expect(mergeSettings({ theme: 'dark', staleDays: 14, autoStash: true })).toEqual({
       theme: 'dark',
       staleDays: 14,
+      autoStash: true,
     });
   });
 

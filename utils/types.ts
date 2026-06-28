@@ -48,6 +48,14 @@ export interface ClosedRecord {
   tabs: StashedTab[];
 }
 
+/** A reusable, named set of tabs you open on demand (not consumed on open). */
+export interface Routine {
+  id: string;
+  name: string;
+  createdAt: string;
+  tabs: StashedTab[];
+}
+
 /** A group of tabs shown as one card on the dashboard. */
 export interface DomainGroup {
   /** Hostname, a custom group key, 'tabgroup:<id>', or the '__landing-pages__' sentinel. */

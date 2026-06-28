@@ -173,6 +173,14 @@ export function ArrowRightIcon({ className }: IconProps) {
   );
 }
 
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg {...base} strokeWidth={2} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
 export function NewWindowIcon({ className }: IconProps) {
   return (
     <svg {...base} strokeWidth={2} className={className}>

@@ -1448,6 +1448,115 @@ footer {
     0 0 0 2px var(--accent-ring) inset;
 }
 
+/* ============================================================ TOGGLE + ICON BTN + BULK BAR */
+
+.toggle {
+  width: 40px;
+  height: 23px;
+  border: none;
+  border-radius: 999px;
+  background: var(--border-strong);
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.16s ease;
+}
+
+.toggle.on {
+  background: var(--accent);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.16s ease;
+}
+
+.toggle.on .toggle-knob {
+  transform: translateX(17px);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background 0.13s ease,
+    color 0.13s ease;
+}
+
+.icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Bulk-select action bar */
+.bulk-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1100;
+}
+
+.bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tab-select {
+  width: 15px;
+  height: 15px;
+  margin-right: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.13s ease;
+}
+
+.page-chip:hover .tab-select,
+.tab-select:checked,
+.selecting .tab-select {
+  opacity: 1;
+}
+
+.page-chip.selected {
+  background: var(--accent-soft);
+}
+
 /* ============================================================ RESPONSIVE */
 
 @media (max-width: 900px) {

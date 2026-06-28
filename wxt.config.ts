@@ -8,7 +8,7 @@ export default defineConfig({
     description:
       'A calm home for your tabs. New tab page that groups your open tabs by domain and lets you close them with style.',
     version: '1.0.0',
-    permissions: ['tabs', 'storage', 'tabGroups'],
+    permissions: ['tabs', 'storage', 'tabGroups', 'alarms', 'contextMenus'],
     chrome_url_overrides: {
       newtab: 'newtab.html',
     },

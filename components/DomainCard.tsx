@@ -13,6 +13,8 @@ const VISIBLE_LIMIT = 8;
 
 interface DomainCardProps {
   group: DomainGroup;
+  selectedUrls: Set<string>;
+  onToggleSelect: (url: string) => void;
   onCloseGroup: (group: DomainGroup) => void;
   onStashGroup: (group: DomainGroup) => void;
   onDedup: (urls: string[]) => void;
@@ -25,6 +27,8 @@ interface DomainCardProps {
 
 export function DomainCard({
   group,
+  selectedUrls,
+  onToggleSelect,
   onCloseGroup,
   onStashGroup,
   onDedup,
@@ -90,6 +94,8 @@ export function DomainCard({
               tab={tab}
               domain={group.domain}
               count={urlCounts[tab.url] || 1}
+              selected={selectedUrls.has(tab.url)}
+              onToggleSelect={onToggleSelect}
               onFocus={onFocus}
               onSave={onSave}
               onClose={onCloseTab}

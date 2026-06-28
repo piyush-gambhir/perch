@@ -35,6 +35,28 @@ function Segmented<T extends string>({
   );
 }
 
+function Toggle({
+  checked,
+  onToggle,
+  label,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      className={`toggle${checked ? ' on' : ''}`}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onToggle}
+    >
+      <span className="toggle-knob" />
+    </button>
+  );
+}
+
 export function SettingsModal({ open, settings, onChange, onClose }: SettingsModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -74,6 +96,18 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
                 { value: 'dark', label: 'Dark' },
               ]}
               onPick={(v) => onChange({ theme: v })}
+            />
+          </div>
+
+          <div className="setting-row">
+            <div className="setting-label">
+              Auto-stash stale tabs
+              <span className="setting-hint">Hourly, stashes tabs past the threshold</span>
+            </div>
+            <Toggle
+              checked={settings.autoStash}
+              onToggle={() => onChange({ autoStash: !settings.autoStash })}
+              label="Auto-stash stale tabs"
             />
           </div>
 

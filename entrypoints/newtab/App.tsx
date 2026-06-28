@@ -13,15 +13,18 @@ import {
   StashIcon,
   UndoIcon,
 } from '../../components/icons';
+import { Routines } from '../../components/Routines';
 import { SavedForLater } from '../../components/SavedForLater';
 import { Sessions } from '../../components/Sessions';
 import { SettingsModal } from '../../components/SettingsModal';
 import { StaleBanner } from '../../components/StaleBanner';
 import { ToastProvider, useToast } from '../../components/Toast';
 import { useDeferred } from '../../hooks/useDeferred';
+import { useRoutines } from '../../hooks/useRoutines';
 import { useSessions } from '../../hooks/useSessions';
 import { useSettings } from '../../hooks/useSettings';
 import { useTabs } from '../../hooks/useTabs';
+import { deleteRoutine, openRoutine, renameRoutine, saveRoutine } from '../../utils/routines';
 import { displayTitle, friendlyDomain, getDateDisplay, getGreeting } from '../../utils/format';
 import type { DragTab } from '../../utils/dnd';
 import {
@@ -82,6 +85,7 @@ function Dashboard() {
   const { realTabs, groups, tabOutCount, refresh } = useTabs();
   const deferred = useDeferred();
   const { sessions, recentlyClosed } = useSessions();
+  const { routines } = useRoutines();
   const { settings, update: updateSettings } = useSettings();
   const showToast = useToast();
 
@@ -89,6 +93,7 @@ function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [dupeDismissed, setDupeDismissed] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
@@ -221,6 +226,37 @@ function Dashboard() {
     showToast('Stash deleted');
   };
 
+  const handleCreateRoutine = async () => {
+    const tabs = toStashedTabs(realTabs);
+    if (tabs.length === 0) {
+      showToast('No tabs to save');
+      return;
+    }
+    await saveRoutine('Routine', tabs);
+    showToast('Routine saved — click its name to rename');
+  };
+
+  const handleOpenRoutine = async (id: string) => {
+    await openRoutine(id);
+    showToast('Opening routine');
+    await refresh();
+  };
+
+  const handleOpenRoutineNewWindow = async (id: string) => {
+    await openRoutine(id, { newWindow: true });
+    showToast('Opening routine in a new window');
+    await refresh();
+  };
+
+  const handleRenameRoutine = async (id: string, name: string) => {
+    await renameRoutine(id, name);
+  };
+
+  const handleDeleteRoutine = async (id: string) => {
+    await deleteRoutine(id);
+    showToast('Routine deleted');
+  };
+
   const handleStashStale = async (tabs: TabInfo[]) => {
     const stashed = toStashedTabs(tabs);
     if (stashed.length === 0) return;
@@ -318,6 +354,55 @@ function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realTabs, deferred.active, sessions]);
 
+  const toggleSelect = (url: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+
+  const clearSelection = () => setSelected(new Set());
+
+  const selectedTabInfos = (): { url: string; title: string }[] => {
+    const seen = new Set<string>();
+    const out: { url: string; title: string }[] = [];
+    for (const t of realTabs) {
+      if (selected.has(t.url) && !seen.has(t.url)) {
+        seen.add(t.url);
+        out.push({ url: t.url, title: t.title });
+      }
+    }
+    return out;
+  };
+
+  const handleBulkStash = async () => {
+    const tabs = toStashedTabs(selectedTabInfos());
+    if (tabs.length === 0) return;
+    await saveSession('Selected tabs', tabs);
+    await closeTabsExact([...selected]);
+    clearSelection();
+    showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
+    await refresh();
+  };
+
+  const handleBulkSave = async () => {
+    const tabs = selectedTabInfos();
+    for (const t of tabs) await deferred.save(t);
+    await closeTabsExact([...selected]);
+    clearSelection();
+    showToast(`Saved ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
+    await refresh();
+  };
+
+  const handleBulkClose = async () => {
+    const closed = await closeTabsExact([...selected]);
+    await pushClosed(`${closed.length} tabs`, closed);
+    clearSelection();
+    showToast(`Closed ${closed.length} tab${closed.length !== 1 ? 's' : ''}`);
+    await refresh();
+  };
+
   return (
     <div className="container">
       <header>
@@ -408,12 +493,14 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="missions">
+          <div className={`missions${selected.size > 0 ? ' selecting' : ''}`}>
             {groups.length > 0 ? (
               groups.map((group) => (
                 <DomainCard
                   key={group.domain}
                   group={group}
+                  selectedUrls={selected}
+                  onToggleSelect={toggleSelect}
                   onCloseGroup={handleCloseGroup}
                   onStashGroup={handleStashGroup}
                   onDedup={handleDedup}
@@ -441,6 +528,15 @@ function Dashboard() {
             onDropToSession={handleDropToSession}
             onCreateStashFromDrop={handleCreateStashFromDrop}
           />
+          <Routines
+            routines={routines}
+            canCreate={realTabs.length > 0}
+            onCreate={handleCreateRoutine}
+            onOpen={handleOpenRoutine}
+            onOpenNewWindow={handleOpenRoutineNewWindow}
+            onRename={handleRenameRoutine}
+            onDelete={handleDeleteRoutine}
+          />
           <SavedForLater
             active={deferred.active}
             archived={deferred.archived}
@@ -454,6 +550,26 @@ function Dashboard() {
       <footer>
         <span className="credit">Built by Piyush Gambhir</span>
       </footer>
+
+      {selected.size > 0 && (
+        <div className="bulk-bar">
+          <span className="bulk-count">{selected.size} selected</span>
+          <div className="bulk-actions">
+            <button className="action-btn" onClick={handleBulkStash}>
+              <StashIcon /> Stash
+            </button>
+            <button className="action-btn" onClick={handleBulkSave}>
+              Save
+            </button>
+            <button className="action-btn close-tabs" onClick={handleBulkClose}>
+              <CloseIcon /> Close
+            </button>
+            <button className="action-btn" onClick={clearSelection}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <CommandPalette
         open={paletteOpen}
