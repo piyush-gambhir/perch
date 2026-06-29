@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { getDragTab, type DragTab } from '../utils/dnd';
-import { faviconUrl, timeAgo } from '../utils/format';
+import { faviconUrl, safeHref, timeAgo } from '../utils/format';
 import type { DeferredTab } from '../utils/types';
 import { ChevronIcon, CloseIcon } from './icons';
 
@@ -42,8 +42,6 @@ export function SavedForLater({
     );
   }, [archived, query]);
 
-  if (active.length === 0 && archived.length === 0) return null;
-
   return (
     <div
       className={`deferred-column${dropOver ? ' drop-over' : ''}`}
@@ -81,9 +79,9 @@ export function SavedForLater({
                 />
                 <div className="deferred-info">
                   <a
-                    href={item.url}
+                    href={safeHref(item.url)}
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     className="deferred-title"
                     title={item.title}
                   >
@@ -105,6 +103,7 @@ export function SavedForLater({
                 <button
                   className="deferred-dismiss"
                   title="Dismiss"
+                  aria-label={`Dismiss ${item.title || item.url}`}
                   onClick={() => onDismiss(item.id)}
                 >
                   <CloseIcon />
@@ -143,9 +142,9 @@ export function SavedForLater({
                   filteredArchive.map((item) => (
                     <div key={item.id} className="archive-item">
                       <a
-                        href={item.url}
+                        href={safeHref(item.url)}
                         target="_blank"
-                        rel="noopener"
+                        rel="noopener noreferrer"
                         className="archive-item-title"
                         title={item.title}
                       >

@@ -1,6 +1,6 @@
 /** One tab "chip" inside a domain card: favicon, title, dupe badge, save/close. */
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { setDragTab } from '../utils/dnd';
 import { displayTitle, faviconUrl } from '../utils/format';
 import type { TabInfo } from '../utils/types';
@@ -11,13 +11,13 @@ interface TabChipProps {
   domain: string;
   count: number;
   selected: boolean;
-  onToggleSelect: (url: string) => void;
+  onToggleSelect: (id: number) => void;
   onFocus: (url: string) => void;
   onSave: (tab: { url: string; title: string }) => void;
   onClose: (url: string) => void;
 }
 
-export function TabChip({
+export const TabChip = memo(function TabChip({
   tab,
   domain,
   count,
@@ -64,14 +64,16 @@ export function TabChip({
           : undefined
       }
     >
-      <input
-        type="checkbox"
-        className="tab-select"
-        checked={selected}
-        aria-label="Select tab"
-        onClick={(e) => e.stopPropagation()}
-        onChange={() => onToggleSelect(tab.url)}
-      />
+      {tab.id !== undefined && (
+        <input
+          type="checkbox"
+          className="tab-select"
+          checked={selected}
+          aria-label={`Select ${label}`}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => onToggleSelect(tab.id as number)}
+        />
+      )}
       {hostname && (
         <img
           className="chip-favicon"
@@ -85,13 +87,23 @@ export function TabChip({
       <span className="chip-text">{label}</span>
       {count > 1 && <span className="chip-dupe-badge">({count}x)</span>}
       <div className="chip-actions">
-        <button className="chip-action chip-save" title="Save for later" onClick={handleSave}>
+        <button
+          className="chip-action chip-save"
+          title="Save for later"
+          aria-label="Save for later"
+          onClick={handleSave}
+        >
           <BookmarkIcon />
         </button>
-        <button className="chip-action chip-close" title="Close this tab" onClick={handleClose}>
+        <button
+          className="chip-action chip-close"
+          title="Close this tab"
+          aria-label={`Close ${label}`}
+          onClick={handleClose}
+        >
           <CloseIcon />
         </button>
       </div>
     </div>
   );
-}
+});

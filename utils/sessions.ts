@@ -7,19 +7,15 @@
 
 import { browser } from 'wxt/browser';
 import { reorderById } from './dnd';
-import { loadSynced, onSyncedChanged, saveSynced } from './syncedStore';
+import { uid } from './id';
+import { withLock } from './locks';
+import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
 import { isInternalUrl } from './tabs';
 import type { ClosedRecord, Session, StashedTab } from './types';
 
 const SESSIONS_KEY = 'sessions';
 const CLOSED_KEY = 'recentlyClosed';
 const CLOSED_LIMIT = 12;
-
-let counter = 0;
-function uid(): string {
-  counter += 1;
-  return `${Date.now().toString(36)}-${counter}`;
-}
 
 /** Reduce live tabs to the minimal {url,title} we persist, skipping internals. */
 export function toStashedTabs(tabs: { url: string; title: string }[]): StashedTab[] {
@@ -37,47 +33,55 @@ export async function getSessions(): Promise<Session[]> {
 
 export async function saveSession(name: string, tabs: StashedTab[]): Promise<Session | null> {
   if (tabs.length === 0) return null;
-  const sessions = await getSessions();
   const session: Session = {
     id: uid(),
     name: name.trim() || 'Untitled stash',
     createdAt: new Date().toISOString(),
     tabs,
   };
-  await saveSynced(SESSIONS_KEY, [session, ...sessions]);
+  await mutateSynced<Session>(SESSIONS_KEY, (list) => [session, ...list]);
   return session;
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  const sessions = await getSessions();
-  await saveSynced(
-    SESSIONS_KEY,
-    sessions.filter((s) => s.id !== id),
-  );
+  await mutateSynced<Session>(SESSIONS_KEY, (list) => list.filter((s) => s.id !== id));
 }
 
 export async function renameSession(id: string, name: string): Promise<void> {
-  const sessions = await getSessions();
-  const s = sessions.find((x) => x.id === id);
-  if (s) {
-    s.name = name.trim() || s.name;
-    await saveSynced(SESSIONS_KEY, sessions);
-  }
+  await mutateSynced<Session>(SESSIONS_KEY, (list) =>
+    list.map((s) => (s.id === id ? { ...s, name: name.trim() || s.name } : s)),
+  );
 }
 
 /** Append tabs to an existing session (used by drag-and-drop), de-duplicating by URL. */
 export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<void> {
-  const sessions = await getSessions();
-  const s = sessions.find((x) => x.id === id);
-  if (!s) return;
-  const seen = new Set(s.tabs.map((t) => t.url));
-  for (const t of tabs) {
-    if (!seen.has(t.url)) {
-      s.tabs.push(t);
-      seen.add(t.url);
+  await mutateSynced<Session>(SESSIONS_KEY, (list) =>
+    list.map((s) => {
+      if (s.id !== id) return s;
+      const seen = new Set(s.tabs.map((t) => t.url));
+      const added = tabs.filter((t) => !seen.has(t.url));
+      return added.length ? { ...s, tabs: [...s.tabs, ...added] } : s;
+    }),
+  );
+}
+
+/**
+ * Append tabs to today's auto-stash session if one exists, else create it. Keeps the
+ * hourly background job from spawning a new session every run.
+ */
+export async function appendOrCreateSession(name: string, tabs: StashedTab[]): Promise<void> {
+  if (tabs.length === 0) return;
+  await mutateSynced<Session>(SESSIONS_KEY, (list) => {
+    const existing = list.find((s) => s.name === name);
+    if (existing) {
+      const seen = new Set(existing.tabs.map((t) => t.url));
+      const added = tabs.filter((t) => !seen.has(t.url));
+      if (!added.length) return list;
+      return list.map((s) => (s.id === existing.id ? { ...s, tabs: [...s.tabs, ...added] } : s));
     }
-  }
-  await saveSynced(SESSIONS_KEY, sessions);
+    const session: Session = { id: uid(), name, createdAt: new Date().toISOString(), tabs };
+    return [session, ...list];
+  });
 }
 
 /** Open every tab in a session. Optionally in a new window, and/or remove after. */
@@ -106,9 +110,9 @@ export async function restoreSession(
 
 /** Reorder stashes by moving one before another (drag-to-reorder). */
 export async function reorderSessions(draggedId: string, targetId: string): Promise<void> {
-  const sessions = await getSessions();
-  const next = reorderById(sessions, draggedId, targetId, (s) => s.id);
-  if (next !== sessions) await saveSynced(SESSIONS_KEY, next);
+  await mutateSynced<Session>(SESSIONS_KEY, (list) =>
+    reorderById(list, draggedId, targetId, (s) => s.id),
+  );
 }
 
 /* ---- Recently closed (undo) ---- */
@@ -123,9 +127,11 @@ export async function getRecentlyClosed(): Promise<ClosedRecord[]> {
 /** Record a close so it can be undone. Newest first, capped. */
 export async function pushClosed(label: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
-  const existing = await getRecentlyClosed();
   const record: ClosedRecord = { id: uid(), closedAt: new Date().toISOString(), label, tabs };
-  await browser.storage.local.set({ [CLOSED_KEY]: [record, ...existing].slice(0, CLOSED_LIMIT) });
+  await withLock(`perch-store:${CLOSED_KEY}`, async () => {
+    const existing = await getRecentlyClosed();
+    await browser.storage.local.set({ [CLOSED_KEY]: [record, ...existing].slice(0, CLOSED_LIMIT) });
+  });
 }
 
 /** Reopen a closed record's tabs and remove it from the undo stack. */
@@ -136,7 +142,10 @@ export async function restoreClosed(id: string): Promise<void> {
   for (const tab of record.tabs) {
     await browser.tabs.create({ url: tab.url, active: false });
   }
-  await browser.storage.local.set({ [CLOSED_KEY]: existing.filter((r) => r.id !== id) });
+  await withLock(`perch-store:${CLOSED_KEY}`, async () => {
+    const cur = await getRecentlyClosed();
+    await browser.storage.local.set({ [CLOSED_KEY]: cur.filter((r) => r.id !== id) });
+  });
 }
 
 /** Reopen the most recent close (the Undo button / Cmd+Shift+T equivalent). */
@@ -145,10 +154,6 @@ export async function undoLastClose(): Promise<boolean> {
   if (existing.length === 0) return false;
   await restoreClosed(existing[0].id);
   return true;
-}
-
-export async function clearRecentlyClosed(): Promise<void> {
-  await browser.storage.local.set({ [CLOSED_KEY]: [] });
 }
 
 /** Subscribe to changes in either sessions (synced) or the undo stack (local). */

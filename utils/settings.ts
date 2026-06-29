@@ -4,6 +4,7 @@
  */
 
 import { browser } from 'wxt/browser';
+import { withLock } from './locks';
 
 export type Theme = 'auto' | 'light' | 'dark';
 
@@ -27,7 +28,7 @@ export function mergeSettings(stored: unknown): Settings {
   const s = (stored ?? {}) as Partial<Settings>;
   const theme: Theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
   const staleDays =
-    typeof s.staleDays === 'number' && s.staleDays >= 1 && s.staleDays <= 90
+    typeof s.staleDays === 'number' && s.staleDays >= 1 && s.staleDays <= 30
       ? Math.round(s.staleDays)
       : DEFAULT_SETTINGS.staleDays;
   const autoStash = typeof s.autoStash === 'boolean' ? s.autoStash : false;
@@ -44,9 +45,11 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(patch: Partial<Settings>): Promise<Settings> {
-  const next = mergeSettings({ ...(await getSettings()), ...patch });
-  await browser.storage.sync.set({ [KEY]: next });
-  return next;
+  return withLock(`perch-store:${KEY}`, async () => {
+    const next = mergeSettings({ ...(await getSettings()), ...patch });
+    await browser.storage.sync.set({ [KEY]: next });
+    return next;
+  });
 }
 
 export function onSettingsChanged(cb: () => void): () => void {

@@ -103,12 +103,18 @@ export function Sessions({
                 <span>{timeAgo(s.createdAt)}</span>
               </div>
             </div>
-            <button className="session-action" title="Restore tabs" onClick={() => onRestore(s.id)}>
+            <button
+              className="session-action"
+              title="Restore tabs"
+              aria-label={`Restore ${s.name}`}
+              onClick={() => onRestore(s.id)}
+            >
               <RestoreIcon />
             </button>
             <button
               className="session-action"
               title="Restore in a new window"
+              aria-label={`Restore ${s.name} in a new window`}
               onClick={() => onRestoreNewWindow(s.id)}
             >
               <NewWindowIcon />
@@ -116,6 +122,7 @@ export function Sessions({
             <button
               className="session-action danger"
               title="Delete stash"
+              aria-label={`Delete ${s.name}`}
               onClick={() => onDelete(s.id)}
             >
               <TrashIcon />

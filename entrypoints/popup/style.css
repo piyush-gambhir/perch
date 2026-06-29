@@ -86,3 +86,9 @@ body {
   opacity: 0.6;
   cursor: default;
 }
+
+.popup-error {
+  font-size: 12px;
+  color: #d93025;
+  padding: 2px 4px;
+}

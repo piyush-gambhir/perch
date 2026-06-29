@@ -110,16 +110,21 @@ export function groupTabs(
         continue;
       }
 
-      let hostname: string;
+      let key: string;
       if (tab.url && tab.url.startsWith('file://')) {
-        hostname = 'local-files';
+        key = 'local-files';
       } else {
-        hostname = new URL(tab.url).hostname;
+        const parsed = new URL(tab.url);
+        // Split local dev servers by port so different projects get their own card.
+        key =
+          parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
+            ? parsed.host
+            : parsed.hostname;
       }
-      if (!hostname) continue;
+      if (!key) continue;
 
-      if (!groupMap[hostname]) groupMap[hostname] = { domain: hostname, tabs: [] };
-      groupMap[hostname].tabs.push(tab);
+      if (!groupMap[key]) groupMap[key] = { domain: key, tabs: [] };
+      groupMap[key].tabs.push(tab);
     } catch {
       // Skip malformed URLs
     }

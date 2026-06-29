@@ -7,9 +7,10 @@ import type { TabInfo } from './types';
 
 export const STALE_DAYS = 7;
 
-/** A tab is stale if it's inactive and untouched for `days`+. */
+/** A tab is stale if it's inactive, not already suspended, and untouched for `days`+. */
 export function isStale(t: TabInfo, now: number = Date.now(), days: number = STALE_DAYS): boolean {
   if (t.active) return false;
+  if (t.discarded) return false; // already suspended — leave it be
   if (!t.lastAccessed) return false;
   return now - t.lastAccessed > days * 86_400_000;
 }

@@ -90,12 +90,18 @@ export function Routines({
                   <span>{timeAgo(r.createdAt)}</span>
                 </div>
               </div>
-              <button className="session-action" title="Open routine" onClick={() => onOpen(r.id)}>
+              <button
+                className="session-action"
+                title="Open routine"
+                aria-label={`Open ${r.name}`}
+                onClick={() => onOpen(r.id)}
+              >
                 <ArrowRightIcon />
               </button>
               <button
                 className="session-action"
                 title="Open in a new window"
+                aria-label={`Open ${r.name} in a new window`}
                 onClick={() => onOpenNewWindow(r.id)}
               >
                 <NewWindowIcon />
@@ -103,6 +109,7 @@ export function Routines({
               <button
                 className="session-action danger"
                 title="Delete routine"
+                aria-label={`Delete ${r.name}`}
                 onClick={() => onDelete(r.id)}
               >
                 <TrashIcon />

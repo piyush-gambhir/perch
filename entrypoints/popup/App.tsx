@@ -8,36 +8,43 @@ import { fetchOpenTabs, isInternalUrl, suspendInactiveTabs } from '../../utils/t
 export function Popup() {
   const [count, setCount] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchOpenTabs().then((tabs) => setCount(tabs.filter((t) => !isInternalUrl(t.url)).length));
+    fetchOpenTabs()
+      .then((tabs) => setCount(tabs.filter((t) => !isInternalUrl(t.url)).length))
+      .catch(() => setCount(null));
   }, []);
 
-  const openDashboard = async () => {
-    await browser.tabs.create({});
-    window.close();
-  };
-
-  const stashWindow = async () => {
+  const run = async (fn: () => Promise<void>) => {
     setBusy(true);
-    const win = await browser.windows.getCurrent();
-    const tabs = await browser.tabs.query({ windowId: win.id });
-    const stashable = tabs.filter((t) => t.url && !isInternalUrl(t.url) && t.id !== undefined);
-    const stashed = toStashedTabs(
-      stashable.map((t) => ({ url: t.url ?? '', title: t.title ?? '' })),
-    );
-    if (stashed.length > 0) {
-      await saveSession('Window', stashed);
-      await browser.tabs.remove(stashable.map((t) => t.id as number));
+    setError('');
+    try {
+      await fn();
+      window.close();
+    } catch {
+      setError('Something went wrong. Try again.');
+      setBusy(false);
     }
-    window.close();
   };
 
-  const suspend = async () => {
-    setBusy(true);
-    await suspendInactiveTabs();
-    window.close();
-  };
+  const openDashboard = () => run(async () => void (await browser.tabs.create({})));
+
+  const stashWindow = () =>
+    run(async () => {
+      const win = await browser.windows.getCurrent();
+      const tabs = await browser.tabs.query({ windowId: win.id });
+      const stashable = tabs.filter((t) => t.url && !isInternalUrl(t.url) && t.id !== undefined);
+      const stashed = toStashedTabs(
+        stashable.map((t) => ({ url: t.url ?? '', title: t.title ?? '' })),
+      );
+      if (stashed.length > 0) {
+        await saveSession('Window', stashed);
+        await browser.tabs.remove(stashable.map((t) => t.id as number));
+      }
+    });
+
+  const suspend = () => run(async () => void (await suspendInactiveTabs()));
 
   return (
     <div className="popup">
@@ -58,6 +65,7 @@ export function Popup() {
       <button className="popup-btn" onClick={suspend} disabled={busy}>
         Suspend inactive tabs
       </button>
+      {error && <div className="popup-error">{error}</div>}
     </div>
   );
 }

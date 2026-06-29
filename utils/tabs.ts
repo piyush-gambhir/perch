@@ -33,7 +33,7 @@ export async function fetchOpenTabs(): Promise<TabInfo[]> {
       title: t.title ?? '',
       windowId: t.windowId,
       active: t.active ?? false,
-      isTabOut: t.url === ntUrl || t.url === 'chrome://newtab/',
+      isPerchTab: t.url === ntUrl || t.url === 'chrome://newtab/',
       lastAccessed: (t as { lastAccessed?: number }).lastAccessed,
       discarded: t.discarded ?? false,
       groupId: (t as { groupId?: number }).groupId ?? -1,
@@ -63,51 +63,70 @@ export function tabGroupColor(name?: string): string {
 /** Read the browser's native tab groups. */
 export async function fetchTabGroups(): Promise<NativeGroup[]> {
   try {
-    const tabGroups = (
-      browser as unknown as {
-        tabGroups?: {
-          query: (q: object) => Promise<{ id: number; title?: string; color: string }[]>;
-        };
-      }
-    ).tabGroups;
-    if (!tabGroups) return [];
-    const groups = await tabGroups.query({});
+    const api = getTabGroupsApi();
+    if (!api) return [];
+    const groups = await api.query({});
     return groups.map((g) => ({ id: g.id, title: g.title ?? '', color: g.color }));
   } catch {
     return [];
   }
 }
 
-/** Create a native Chrome tab group from the given URLs and name it. */
-export async function groupTabsInBrowser(urls: string[], title: string): Promise<void> {
-  const urlSet = new Set(urls);
-  const all = await browser.tabs.query({});
-  const ids = all
-    .filter((t) => urlSet.has(t.url ?? ''))
-    .map((t) => t.id)
-    .filter((id): id is number => id !== undefined);
-  if (ids.length === 0) return;
-  const groupId = await (
-    browser.tabs as unknown as { group: (o: object) => Promise<number> }
-  ).group({ tabIds: ids });
-  try {
-    await (
-      browser as unknown as { tabGroups: { update: (id: number, p: object) => Promise<unknown> } }
-    ).tabGroups.update(groupId, { title });
-  } catch {
-    /* naming is best-effort */
+// Typed surface for the tabGroups API + tabs.group/ungroup, which webextension-polyfill
+// does not always type. Localized here so the rest of the code stays cast-free.
+interface TabGroupsApi {
+  query: (q: Record<string, unknown>) => Promise<{ id: number; title?: string; color: string }[]>;
+  update: (id: number, props: { title?: string }) => Promise<unknown>;
+}
+interface TabsGroupApi {
+  group: (opts: { tabIds: number[] }) => Promise<number>;
+  ungroup: (ids: number[]) => Promise<void>;
+}
+// Accessed lazily (browser is undefined outside the extension, e.g. in unit tests).
+const getTabGroupsApi = (): TabGroupsApi | undefined =>
+  (browser as unknown as { tabGroups?: TabGroupsApi } | undefined)?.tabGroups;
+const getTabsGroupApi = (): TabsGroupApi => browser.tabs as unknown as TabsGroupApi;
+
+/**
+ * Create a native Chrome tab group from these tabs and name it. Tabs are grouped
+ * per-window (Chrome requires a single window per group). Best-effort.
+ */
+export async function groupTabsInBrowser(
+  tabs: { id?: number; windowId?: number }[],
+  title: string,
+): Promise<void> {
+  const api = getTabGroupsApi();
+  if (!api) return;
+  const tabsApi = getTabsGroupApi();
+  const byWindow = new Map<number, number[]>();
+  for (const t of tabs) {
+    if (t.id === undefined || t.windowId === undefined) continue;
+    const arr = byWindow.get(t.windowId) ?? [];
+    arr.push(t.id);
+    byWindow.set(t.windowId, arr);
+  }
+  for (const ids of byWindow.values()) {
+    if (ids.length === 0) continue;
+    try {
+      const groupId = await tabsApi.group({ tabIds: ids });
+      await api.update(groupId, { title });
+    } catch {
+      /* grouping unavailable or tabs moved — skip this window */
+    }
   }
 }
 
 /** Ungroup every tab in the given native group. */
 export async function ungroupTabsInBrowser(groupId: number): Promise<void> {
-  const all = await browser.tabs.query({});
-  const ids = all
-    .filter((t) => (t as { groupId?: number }).groupId === groupId)
-    .map((t) => t.id)
-    .filter((id): id is number => id !== undefined);
-  if (ids.length > 0) {
-    await (browser.tabs as unknown as { ungroup: (ids: number[]) => Promise<void> }).ungroup(ids);
+  try {
+    const all = await browser.tabs.query({});
+    const ids = all
+      .filter((t) => (t as { groupId?: number }).groupId === groupId)
+      .map((t) => t.id)
+      .filter((id): id is number => id !== undefined);
+    if (ids.length > 0) await getTabsGroupApi().ungroup(ids);
+  } catch {
+    /* best-effort */
   }
 }
 
@@ -117,50 +136,10 @@ export async function countRealTabs(): Promise<number> {
   return tabs.filter((t) => !isInternalUrl(t.url ?? '')).length;
 }
 
-/** Close tabs by hostname match. file:// URLs are matched exactly. Returns closed tabs. */
-export async function closeTabsByUrls(urls: string[]): Promise<StashedTab[]> {
-  if (!urls || urls.length === 0) return [];
-
-  const targetHostnames: string[] = [];
-  const exactUrls = new Set<string>();
-
-  for (const u of urls) {
-    if (u.startsWith('file://')) {
-      exactUrls.add(u);
-    } else {
-      try {
-        targetHostnames.push(new URL(u).hostname);
-      } catch {
-        /* skip */
-      }
-    }
-  }
-
-  const allTabs = await browser.tabs.query({});
-  const matched = allTabs.filter((tab) => {
-    const tabUrl = tab.url ?? '';
-    if (tabUrl.startsWith('file://') && exactUrls.has(tabUrl)) return true;
-    try {
-      const tabHostname = new URL(tabUrl).hostname;
-      return !!tabHostname && targetHostnames.includes(tabHostname);
-    } catch {
-      return false;
-    }
-  });
-  const toClose = matched.map((t) => t.id).filter((id): id is number => id !== undefined);
-  if (toClose.length > 0) await browser.tabs.remove(toClose);
-  return matched.map(stash);
-}
-
-/** Close tabs by exact URL match (used for homepages/custom groups). Returns closed tabs. */
-export async function closeTabsExact(urls: string[]): Promise<StashedTab[]> {
-  if (!urls || urls.length === 0) return [];
-  const urlSet = new Set(urls);
-  const allTabs = await browser.tabs.query({});
-  const matched = allTabs.filter((t) => urlSet.has(t.url ?? ''));
-  const toClose = matched.map((t) => t.id).filter((id): id is number => id !== undefined);
-  if (toClose.length > 0) await browser.tabs.remove(toClose);
-  return matched.map(stash);
+/** Close the exact tabs with these ids. The precise, safe way to close a card's tabs. */
+export async function closeTabsByIds(ids: (number | undefined)[]): Promise<void> {
+  const real = ids.filter((id): id is number => id !== undefined);
+  if (real.length > 0) await browser.tabs.remove(real);
 }
 
 /** Close a single tab by exact URL. Returns the closed tab (for undo). */
@@ -254,7 +233,7 @@ export const APPROX_MB_PER_TAB = 80;
 
 /** Tabs eligible to discard: real, not active, not already discarded. */
 export function discardableCount(tabs: TabInfo[]): number {
-  return tabs.filter((t) => !t.active && !t.discarded && !t.isTabOut && !isInternalUrl(t.url))
+  return tabs.filter((t) => !t.active && !t.discarded && !t.isPerchTab && !isInternalUrl(t.url))
     .length;
 }
 

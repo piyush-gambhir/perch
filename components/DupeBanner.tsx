@@ -10,9 +10,14 @@ interface DupeBannerProps {
 
 export function DupeBanner({ count, onClose, onDismiss }: DupeBannerProps) {
   return (
-    <div className="tab-cleanup-banner" style={{ display: 'flex' }}>
+    <div
+      className="tab-cleanup-banner"
+      style={{ display: 'flex' }}
+      role="region"
+      aria-label="Duplicate Perch tabs"
+    >
       <div className="tab-cleanup-left">
-        <div className="tab-cleanup-icon">
+        <div className="tab-cleanup-icon" aria-hidden="true">
           <DuplicateIcon />
         </div>
         <div className="tab-cleanup-text">

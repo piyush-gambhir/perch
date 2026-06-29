@@ -1,24 +1,24 @@
-/** Proactive nudge: surfaces tabs untouched for 7+ days with bulk stash/close. */
+/** Proactive nudge: surfaces tabs untouched past the configured threshold. */
 
-import { STALE_DAYS } from '../utils/stale';
 import { ClockIcon } from './icons';
 
 interface StaleBannerProps {
   count: number;
+  days: number;
   onStash: () => void;
   onClose: () => void;
   onDismiss: () => void;
 }
 
-export function StaleBanner({ count, onStash, onClose, onDismiss }: StaleBannerProps) {
+export function StaleBanner({ count, days, onStash, onClose, onDismiss }: StaleBannerProps) {
   return (
-    <div className="tab-cleanup-banner stale-banner">
+    <div className="tab-cleanup-banner stale-banner" role="region" aria-label="Stale tabs">
       <div className="tab-cleanup-left">
-        <div className="tab-cleanup-icon">
+        <div className="tab-cleanup-icon" aria-hidden="true">
           <ClockIcon />
         </div>
         <div className="tab-cleanup-text">
-          <strong>{count}</strong> tab{count !== 1 ? 's' : ''} untouched for {STALE_DAYS}+ days.
+          <strong>{count}</strong> tab{count !== 1 ? 's' : ''} untouched for {days}+ days.
         </div>
       </div>
       <div className="stale-actions">
@@ -28,7 +28,7 @@ export function StaleBanner({ count, onStash, onClose, onDismiss }: StaleBannerP
         <button className="tab-cleanup-btn" onClick={onClose}>
           Close them
         </button>
-        <button className="banner-dismiss" title="Dismiss" onClick={onDismiss}>
+        <button className="banner-dismiss" title="Dismiss" aria-label="Dismiss" onClick={onDismiss}>
           ×
         </button>
       </div>

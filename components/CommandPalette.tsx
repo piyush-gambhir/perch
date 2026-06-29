@@ -2,6 +2,7 @@
  *  stashed sessions; keyboard-driven jump / open / restore. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { faviconUrl } from '../utils/format';
 import { SearchIcon } from './icons';
 
@@ -44,6 +45,8 @@ export function CommandPalette({ open, onClose, items }: CommandPaletteProps) {
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(open, dialogRef);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -98,6 +101,7 @@ export function CommandPalette({ open, onClose, items }: CommandPaletteProps) {
   return (
     <div className="palette-overlay" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
         className="palette"
         role="dialog"
         aria-modal="true"

@@ -138,6 +138,7 @@ export function displayTitle(title: string, url: string, hostname = ''): string 
 export function timeAgo(dateStr: string, now: Date = new Date()): string {
   if (!dateStr) return '';
   const then = new Date(dateStr);
+  if (Number.isNaN(then.getTime())) return '';
   const diffMins = Math.floor((now.getTime() - then.getTime()) / 60000);
   const diffHours = Math.floor((now.getTime() - then.getTime()) / 3600000);
   const diffDays = Math.floor((now.getTime() - then.getTime()) / 86400000);
@@ -157,7 +158,8 @@ export function getGreeting(now: Date = new Date()): string {
 }
 
 export function getDateDisplay(now: Date = new Date()): string {
-  return now.toLocaleDateString('en-US', {
+  // undefined locale → the user's own locale.
+  return now.toLocaleDateString(undefined, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -168,4 +170,15 @@ export function getDateDisplay(now: Date = new Date()): string {
 /** Google's favicon service URL for a hostname. */
 export function faviconUrl(hostname: string): string {
   return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+}
+
+/** Only allow safe link schemes; blocks javascript:/data: and other injection vectors. */
+export function safeHref(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'file:') return url;
+  } catch {
+    /* not a URL */
+  }
+  return '#';
 }

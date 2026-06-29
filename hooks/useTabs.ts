@@ -84,7 +84,7 @@ export function useTabs(): UseTabs {
 
   const realTabs = useMemo(() => tabs.filter((t) => !isInternalUrl(t.url)), [tabs]);
   const groups = useMemo(() => groupTabs(realTabs, { nativeGroups }), [realTabs, nativeGroups]);
-  const tabOutCount = useMemo(() => tabs.filter((t) => t.isTabOut).length, [tabs]);
+  const tabOutCount = useMemo(() => tabs.filter((t) => t.isPerchTab).length, [tabs]);
 
   return { tabs, realTabs, groups, nativeGroups, tabOutCount, refresh };
 }

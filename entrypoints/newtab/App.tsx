@@ -44,8 +44,7 @@ import {
   closeDuplicateTabs,
   closeTabByUrl,
   closeTabOutDupes,
-  closeTabsByUrls,
-  closeTabsExact,
+  closeTabsByIds,
   discardableCount,
   focusTab,
   groupTabsInBrowser,
@@ -76,6 +75,11 @@ function hostOf(url: string): string {
   }
 }
 
+const IS_MAC =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+const SEARCH_HINT = IS_MAC ? '⌘K' : 'Ctrl K';
+
 function formatFreed(n: number): string {
   const mb = n * APPROX_MB_PER_TAB;
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
@@ -93,7 +97,8 @@ function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [dupeDismissed, setDupeDismissed] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
 
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
@@ -124,11 +129,7 @@ function Dashboard() {
   const groupLabel = (g: DomainGroup) =>
     g.domain === LANDING_PAGES_KEY ? 'Homepages' : g.label || friendlyDomain(g.domain);
 
-  const closeGroupTabs = (g: DomainGroup) => {
-    const urls = g.tabs.map((t) => t.url);
-    const useExact = g.domain === LANDING_PAGES_KEY || !!g.label;
-    return useExact ? closeTabsExact(urls) : closeTabsByUrls(urls);
-  };
+  const idsOf = (tabs: TabInfo[]) => tabs.map((t) => t.id);
 
   const handleFocus = (url: string) => focusTab(url);
 
@@ -147,9 +148,12 @@ function Dashboard() {
   };
 
   const handleCloseGroup = async (group: DomainGroup) => {
-    const closed = await closeGroupTabs(group);
-    await pushClosed(groupLabel(group), closed);
-    showToast(`Closed ${closed.length} tab${closed.length !== 1 ? 's' : ''}`);
+    const stashed = toStashedTabs(group.tabs);
+    await closeTabsByIds(idsOf(group.tabs));
+    await pushClosed(groupLabel(group), stashed);
+    showToast(`Closed ${group.tabs.length} tab${group.tabs.length !== 1 ? 's' : ''}`, () =>
+      handleUndo(),
+    );
     await refresh();
   };
 
@@ -157,7 +161,7 @@ function Dashboard() {
     const tabs = toStashedTabs(group.tabs);
     if (tabs.length === 0) return;
     await saveSession(groupLabel(group), tabs);
-    await closeGroupTabs(group);
+    await closeTabsByIds(idsOf(group.tabs));
     showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
   };
@@ -170,9 +174,10 @@ function Dashboard() {
   };
 
   const handleCloseAll = async () => {
-    const closed = await closeTabsByUrls(realTabs.map((t) => t.url));
-    await pushClosed(`${closed.length} tabs`, closed);
-    showToast('All tabs closed. Fresh start.');
+    const stashed = toStashedTabs(realTabs);
+    await closeTabsByIds(idsOf(realTabs));
+    await pushClosed(`${stashed.length} tabs`, stashed);
+    showToast('All tabs closed. Fresh start.', () => handleUndo());
     await refresh();
   };
 
@@ -180,7 +185,7 @@ function Dashboard() {
     const tabs = toStashedTabs(realTabs);
     if (tabs.length === 0) return;
     await saveSession('All tabs', tabs);
-    await closeTabsByUrls(realTabs.map((t) => t.url));
+    await closeTabsByIds(idsOf(realTabs));
     showToast(`Stashed ${tabs.length} tabs`);
     await refresh();
   };
@@ -261,17 +266,20 @@ function Dashboard() {
     const stashed = toStashedTabs(tabs);
     if (stashed.length === 0) return;
     await saveSession('Stale tabs', stashed);
-    await closeTabsExact(stashed.map((t) => t.url));
+    await closeTabsByIds(idsOf(tabs));
     setStaleDismissed(true);
     showToast(`Stashed ${stashed.length} stale tab${stashed.length !== 1 ? 's' : ''}`);
     await refresh();
   };
 
   const handleCloseStale = async (tabs: TabInfo[]) => {
-    const closed = await closeTabsExact(tabs.map((t) => t.url));
-    await pushClosed('Stale tabs', closed);
+    const stashed = toStashedTabs(tabs);
+    await closeTabsByIds(idsOf(tabs));
+    await pushClosed('Stale tabs', stashed);
     setStaleDismissed(true);
-    showToast(`Closed ${closed.length} stale tab${closed.length !== 1 ? 's' : ''}`);
+    showToast(`Closed ${stashed.length} stale tab${stashed.length !== 1 ? 's' : ''}`, () =>
+      handleUndo(),
+    );
     await refresh();
   };
 
@@ -282,11 +290,8 @@ function Dashboard() {
   };
 
   const handleGroupInBrowser = async (group: DomainGroup) => {
-    await groupTabsInBrowser(
-      group.tabs.map((t) => t.url),
-      groupLabel(group),
-    );
-    showToast(`Grouped in browser`);
+    await groupTabsInBrowser(group.tabs, groupLabel(group));
+    showToast('Grouped in browser');
     await refresh();
   };
 
@@ -320,7 +325,7 @@ function Dashboard() {
 
   const paletteItems: PaletteItem[] = useMemo(() => {
     const tabItems: PaletteItem[] = realTabs
-      .filter((t) => !t.isTabOut)
+      .filter((t) => !t.isPerchTab)
       .map((t) => {
         const hostname = hostOf(t.url);
         return {
@@ -354,33 +359,26 @@ function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realTabs, deferred.active, sessions]);
 
-  const toggleSelect = (url: string) =>
+  const toggleSelect = (id: number) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(url)) next.delete(url);
-      else next.add(url);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
 
   const clearSelection = () => setSelected(new Set());
 
-  const selectedTabInfos = (): { url: string; title: string }[] => {
-    const seen = new Set<string>();
-    const out: { url: string; title: string }[] = [];
-    for (const t of realTabs) {
-      if (selected.has(t.url) && !seen.has(t.url)) {
-        seen.add(t.url);
-        out.push({ url: t.url, title: t.title });
-      }
-    }
-    return out;
-  };
+  const selectedTabInfos = (): { url: string; title: string }[] =>
+    realTabs
+      .filter((t) => t.id !== undefined && selected.has(t.id))
+      .map((t) => ({ url: t.url, title: t.title }));
 
   const handleBulkStash = async () => {
     const tabs = toStashedTabs(selectedTabInfos());
     if (tabs.length === 0) return;
     await saveSession('Selected tabs', tabs);
-    await closeTabsExact([...selected]);
+    await closeTabsByIds([...selected]);
     clearSelection();
     showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
@@ -388,18 +386,21 @@ function Dashboard() {
 
   const handleBulkSave = async () => {
     const tabs = selectedTabInfos();
+    if (tabs.length === 0) return;
     for (const t of tabs) await deferred.save(t);
-    await closeTabsExact([...selected]);
+    await closeTabsByIds([...selected]);
     clearSelection();
     showToast(`Saved ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
   };
 
   const handleBulkClose = async () => {
-    const closed = await closeTabsExact([...selected]);
-    await pushClosed(`${closed.length} tabs`, closed);
+    const stashed = toStashedTabs(selectedTabInfos());
+    if (stashed.length === 0) return;
+    await closeTabsByIds([...selected]);
+    await pushClosed(`${stashed.length} tabs`, stashed);
     clearSelection();
-    showToast(`Closed ${closed.length} tab${closed.length !== 1 ? 's' : ''}`);
+    showToast(`Closed ${stashed.length} tab${stashed.length !== 1 ? 's' : ''}`, () => handleUndo());
     await refresh();
   };
 
@@ -418,7 +419,7 @@ function Dashboard() {
           >
             <SearchIcon />
             <span className="search-field-text">Search tabs…</span>
-            <kbd>⌘K</kbd>
+            <kbd>{SEARCH_HINT}</kbd>
           </button>
           {recentlyClosed.length > 0 && (
             <button
@@ -463,6 +464,7 @@ function Dashboard() {
       {stale.length > 0 && !staleDismissed && (
         <StaleBanner
           count={stale.length}
+          days={settings.staleDays}
           onStash={() => handleStashStale(stale)}
           onClose={() => handleCloseStale(stale)}
           onDismiss={() => setStaleDismissed(true)}
@@ -472,7 +474,7 @@ function Dashboard() {
       <div className="dashboard-columns">
         <div className="active-section">
           <div className="section-header">
-            <h2>{groups.length > 0 ? 'Open tabs' : 'Right now'}</h2>
+            <h2>Open tabs</h2>
             <div className="section-line"></div>
             <div className="section-count">
               {groups.length > 0 ? (
@@ -480,6 +482,18 @@ function Dashboard() {
                   <span>
                     {groups.length} group{groups.length !== 1 ? 's' : ''}
                   </span>
+                  <button
+                    className="action-btn"
+                    aria-pressed={selectMode}
+                    onClick={() => {
+                      setSelectMode((v) => {
+                        if (v) clearSelection();
+                        return !v;
+                      });
+                    }}
+                  >
+                    {selectMode ? 'Done' : 'Select'}
+                  </button>
                   <button className="action-btn" onClick={handleStashAll}>
                     <StashIcon /> Stash all
                   </button>
@@ -493,13 +507,13 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className={`missions${selected.size > 0 ? ' selecting' : ''}`}>
+          <div className={`missions${selectMode || selected.size > 0 ? ' selecting' : ''}`}>
             {groups.length > 0 ? (
               groups.map((group) => (
                 <DomainCard
                   key={group.domain}
                   group={group}
-                  selectedUrls={selected}
+                  selectedIds={selected}
                   onToggleSelect={toggleSelect}
                   onCloseGroup={handleCloseGroup}
                   onStashGroup={handleStashGroup}

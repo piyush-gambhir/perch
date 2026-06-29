@@ -85,10 +85,14 @@ export const LANDING_PAGE_PATTERNS: LandingPagePattern[] = [
     hostname: 'mail.google.com',
     test: (_p, h) => !h.includes('#inbox/') && !h.includes('#sent/') && !h.includes('#search/'),
   },
-  { hostname: 'x.com', pathExact: ['/home'] },
+  { hostname: 'x.com', pathExact: ['/home', '/'] },
+  { hostname: 'www.x.com', pathExact: ['/home', '/'] },
+  { hostname: 'twitter.com', pathExact: ['/home', '/'] },
   { hostname: 'www.linkedin.com', pathExact: ['/'] },
+  { hostname: 'linkedin.com', pathExact: ['/'] },
   { hostname: 'github.com', pathExact: ['/'] },
   { hostname: 'www.youtube.com', pathExact: ['/'] },
+  { hostname: 'youtube.com', pathExact: ['/'] },
 ];
 
 /** Custom group rules: merge subdomains or split a site by path into its own card. */

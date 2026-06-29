@@ -7,7 +7,7 @@ const NOW = new Date('2026-06-29T12:00:00Z').getTime();
 const DAY = 86_400_000;
 
 function tab(over: Partial<TabInfo> = {}): TabInfo {
-  return { url: 'https://a.com', title: 'A', active: false, isTabOut: false, ...over };
+  return { url: 'https://a.com', title: 'A', active: false, isPerchTab: false, ...over };
 }
 
 describe('isStale', () => {

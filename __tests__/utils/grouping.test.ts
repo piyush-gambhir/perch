@@ -10,7 +10,7 @@ import type { TabInfo } from '../../utils/types';
 import { LANDING_PAGES_KEY } from '../../utils/types';
 
 function tab(url: string, title = '', extra: Partial<TabInfo> = {}): TabInfo {
-  return { url, title, active: false, isTabOut: false, ...extra };
+  return { url, title, active: false, isPerchTab: false, ...extra };
 }
 
 describe('isLandingPage', () => {
@@ -28,6 +28,13 @@ describe('isLandingPage', () => {
   it('uses the gmail test for inbox vs threads', () => {
     expect(isLandingPage('https://mail.google.com/mail/u/0/')).toBe(true);
     expect(isLandingPage('https://mail.google.com/mail/u/0/#inbox/thread123')).toBe(false);
+  });
+
+  it('detects x.com homepage at both / and /home (and www/twitter)', () => {
+    expect(isLandingPage('https://x.com/')).toBe(true);
+    expect(isLandingPage('https://x.com/home')).toBe(true);
+    expect(isLandingPage('https://www.x.com/')).toBe(true);
+    expect(isLandingPage('https://twitter.com/home')).toBe(true);
   });
 });
 
@@ -76,6 +83,16 @@ describe('groupTabs', () => {
   it('ignores groupId with no matching native group', () => {
     const groups = groupTabs([tab('https://a.com/x', '', { groupId: 9 })], { nativeGroups: [] });
     expect(groups[0].domain).toBe('a.com');
+  });
+
+  it('splits localhost dev servers by port', () => {
+    const groups = groupTabs([
+      tab('http://localhost:3000/'),
+      tab('http://localhost:3000/about'),
+      tab('http://localhost:5173/'),
+    ]);
+    const keys = groups.map((g) => g.domain).sort();
+    expect(keys).toEqual(['localhost:3000', 'localhost:5173']);
   });
 
   it('applies custom group rules', () => {

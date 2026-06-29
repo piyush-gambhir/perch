@@ -12,8 +12,14 @@ entirely on your device.
 - **Your open tabs** (titles and URLs) — read with the `tabs` permission solely to
   display, group, focus, suspend, and close them on the dashboard. This information
   is shown only to you, in your browser, and is never sent anywhere.
-- **Local storage** (`storage` permission) — your "Saved for later" items, stashed
-  sessions, and settings are stored with the browser's storage API.
+- **Native tab groups** (`tabGroups` permission) — read to reflect Chrome's tab
+  groups on the dashboard, and used when you create or ungroup one. Stays on-device.
+- **Alarms** (`alarms` permission) — schedules the optional hourly auto-stash of stale
+  tabs (off by default). Runs entirely locally.
+- **Context menus** (`contextMenus` permission) — adds the right-click "Stash" / "Save
+  for later" actions.
+- **Local storage** (`storage` permission) — your "Saved for later" items, stashes,
+  routines, and settings are stored with the browser's storage API.
   - Saved items and stashes are kept in `storage.local` (on your device).
   - Settings are kept in `storage.sync`, which Chrome may sync between your own
     signed-in devices through your existing browser profile. This is handled by the

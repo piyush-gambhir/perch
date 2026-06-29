@@ -59,7 +59,10 @@ No setup. Open a new tab and you're home.
 ## Permission justifications (paste into the dashboard's "Privacy practices" tab)
 
 - **tabs** — Perch reads open tab titles/URLs to display, group, focus, suspend, and close them on the dashboard. Core functionality.
-- **storage** — Saves your "Saved for later" items, stashed sessions, and settings locally (and syncs tiny settings via the browser profile).
+- **storage** — Saves your "Saved for later" items, stashes, routines, and settings (locally, and synced across your own devices via the browser profile).
+- **tabGroups** — Reflects Chrome's native tab groups on the dashboard and lets you create/ungroup them.
+- **alarms** — Runs the optional hourly auto-stash of stale tabs (off by default).
+- **contextMenus** — Adds the right-click "Stash in Perch" / "Save for later" actions.
 
 **Remote code:** No. All code is bundled in the package.
 **Data usage:** Perch does not collect or transmit user data. (See PRIVACY.md.)

@@ -1,6 +1,7 @@
 /** Settings modal — theme and stale threshold. */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { Settings, Theme } from '../utils/settings';
 
 interface SettingsModalProps {
@@ -58,6 +59,9 @@ function Toggle({
 }
 
 export function SettingsModal({ open, settings, onChange, onClose }: SettingsModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(open, dialogRef);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -72,6 +76,7 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
   return (
     <div className="palette-overlay" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
         className="settings-modal"
         role="dialog"
         aria-modal="true"

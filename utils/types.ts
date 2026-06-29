@@ -10,7 +10,7 @@ export interface TabInfo {
   windowId?: number;
   active: boolean;
   /** True if this tab is Perch's own new-tab page. */
-  isTabOut: boolean;
+  isPerchTab: boolean;
   /** Epoch ms the tab was last active (Chrome's tab.lastAccessed). */
   lastAccessed?: number;
   /** True if the tab has been discarded/suspended to free memory. */
