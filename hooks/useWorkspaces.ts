@@ -1,11 +1,11 @@
-/** useWorkspaces — live workspace list + active id, with a lazily-seeded "Default". */
+/** useWorkspaces — live workspace list + active id, with an atomic one-time Default seed. */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  createWorkspace,
   getActiveWorkspaceId,
   getWorkspaces,
   onWorkspacesChanged,
+  seedDefaultIfEmpty,
   setActiveWorkspaceId,
 } from '../utils/workspaces';
 import type { Workspace } from '../utils/types';
@@ -19,26 +19,27 @@ export interface UseWorkspaces {
 export function useWorkspaces(): UseWorkspaces {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const seeded = useRef(false);
 
+  // Read-only: safe to use as the change subscriber (never writes storage).
   const refresh = useCallback(async () => {
-    let list = await getWorkspaces();
-    let active = await getActiveWorkspaceId();
-    // Seed a Default workspace the first time, so there's always an active context.
-    if (list.length === 0) {
-      const def = await createWorkspace('Default');
-      list = [def];
-      active = def.id;
-      await setActiveWorkspaceId(def.id);
-    } else if (!active || !list.some((w) => w.id === active)) {
-      active = list[0].id;
-      await setActiveWorkspaceId(active);
-    }
+    const [list, active] = await Promise.all([getWorkspaces(), getActiveWorkspaceId()]);
     setWorkspaces(list);
-    setActiveId(active);
+    setActiveId(active && list.some((w) => w.id === active) ? active : (list[0]?.id ?? null));
   }, []);
 
   useEffect(() => {
-    refresh();
+    (async () => {
+      if (!seeded.current) {
+        seeded.current = true;
+        const { list, seededId } = await seedDefaultIfEmpty();
+        const active = await getActiveWorkspaceId();
+        if (!active || !list.some((w) => w.id === active)) {
+          await setActiveWorkspaceId(seededId ?? list[0]?.id ?? null);
+        }
+      }
+      await refresh();
+    })();
     const unsub = onWorkspacesChanged(refresh);
     return unsub;
   }, [refresh]);

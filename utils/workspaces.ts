@@ -9,7 +9,9 @@
 
 import { browser } from 'wxt/browser';
 import { uid } from './id';
+import { withLock } from './locks';
 import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
+import { isInternalUrl, openUrls } from './tabs';
 import type { StashedTab, Workspace } from './types';
 
 const WS_KEY = 'workspaces';
@@ -23,6 +25,22 @@ export async function createWorkspace(name: string, tabs: StashedTab[] = []): Pr
   const ws: Workspace = { id: uid(), name: name.trim() || 'Workspace', tabs };
   await mutateSynced<Workspace>(WS_KEY, (list) => [...list, ws]);
   return ws;
+}
+
+/** Create a "Default" workspace iff none exist — atomically, so concurrent contexts
+ *  (multiple new-tab pages, StrictMode double-mount) can't seed duplicates. */
+export async function seedDefaultIfEmpty(): Promise<{
+  list: Workspace[];
+  seededId: string | null;
+}> {
+  let seededId: string | null = null;
+  const list = await mutateSynced<Workspace>(WS_KEY, (cur) => {
+    if (cur.length > 0) return cur;
+    const def: Workspace = { id: uid(), name: 'Default', tabs: [] };
+    seededId = def.id;
+    return [def];
+  });
+  return { list, seededId };
 }
 
 export async function renameWorkspace(id: string, name: string): Promise<void> {
@@ -53,6 +71,44 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
 
 export async function setActiveWorkspaceId(id: string | null): Promise<void> {
   await browser.storage.local.set({ [ACTIVE_KEY]: id });
+}
+
+/**
+ * Switch to a workspace, scoped to the CURRENT window: capture the current window's
+ * tabs into the active workspace, close them, and open the target's tabs in that same
+ * window. Serialized via a lock and reads tabs freshly, so rapid switches and
+ * mid-load switches can't corrupt or lose data. Returns the target's name.
+ */
+export async function switchWorkspace(targetId: string): Promise<string | null> {
+  return withLock('perch-workspace-switch', async () => {
+    const list = await getWorkspaces();
+    const target = list.find((w) => w.id === targetId);
+    if (!target) return null;
+    const activeId = await getActiveWorkspaceId();
+    if (activeId === targetId) return null;
+
+    const win = await browser.windows.getCurrent();
+    const winId = win?.id;
+    const live = await browser.tabs.query(winId !== undefined ? { windowId: winId } : {});
+    const real = live.filter((t) => t.url && !isInternalUrl(t.url));
+    const captured: StashedTab[] = real.map((t) => ({
+      url: t.url as string,
+      title: t.title || (t.url as string),
+    }));
+
+    // Save the current window into the active workspace BEFORE closing anything.
+    if (activeId) await setWorkspaceTabs(activeId, captured);
+
+    const ids = real.map((t) => t.id).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) await browser.tabs.remove(ids);
+
+    await openUrls(
+      target.tabs.map((t) => t.url),
+      winId,
+    );
+    await setActiveWorkspaceId(targetId);
+    return target.name;
+  });
 }
 
 export function onWorkspacesChanged(cb: () => void): () => void {

@@ -18,12 +18,15 @@ entirely on your device.
   tabs (off by default). Runs entirely locally.
 - **Context menus** (`contextMenus` permission) — adds the right-click "Stash" / "Save
   for later" actions.
-- **Local storage** (`storage` permission) — your "Saved for later" items, stashes,
-  routines, and settings are stored with the browser's storage API.
-  - Saved items and stashes are kept in `storage.local` (on your device).
-  - Settings are kept in `storage.sync`, which Chrome may sync between your own
-    signed-in devices through your existing browser profile. This is handled by the
-    browser; Perch operates no server and receives none of this data.
+- **Storage** (`storage` permission) — your "Saved for later" items, stashes,
+  routines, workspaces, and settings are stored with the browser's storage API.
+  - They are kept in `storage.local` (on your device) and also mirrored to
+    `storage.sync`, which Chrome may sync between your own signed-in devices through
+    your existing browser profile. This data includes tab titles and URLs. The sync
+    is performed entirely by the browser — Perch operates no server and receives none
+    of it. The active-workspace selection stays local to each device.
+  - You can export everything to (or import from) a local JSON file at any time, and
+    uninstalling removes all of it.
 
 ## What Perch does NOT do
 

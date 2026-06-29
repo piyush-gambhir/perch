@@ -1,6 +1,6 @@
 /** One tab "chip" inside a domain card: favicon, title, dupe badge, save/close. */
 
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import { setDragTab } from '../utils/dnd';
 import { displayTitle, faviconUrl } from '../utils/format';
 import type { TabInfo } from '../utils/types';
@@ -11,17 +11,19 @@ interface TabChipProps {
   domain: string;
   count: number;
   selected: boolean;
+  selecting: boolean;
   onToggleSelect: (id: number) => void;
   onFocus: (url: string) => void;
   onSave: (tab: { url: string; title: string }) => void;
   onClose: (url: string) => void;
 }
 
-export const TabChip = memo(function TabChip({
+export function TabChip({
   tab,
   domain,
   count,
   selected,
+  selecting,
   onToggleSelect,
   onFocus,
   onSave,
@@ -69,6 +71,8 @@ export const TabChip = memo(function TabChip({
           type="checkbox"
           className="tab-select"
           checked={selected}
+          tabIndex={selecting || selected ? 0 : -1}
+          aria-hidden={!(selecting || selected)}
           aria-label={`Select ${label}`}
           onClick={(e) => e.stopPropagation()}
           onChange={() => onToggleSelect(tab.id as number)}
@@ -106,4 +110,4 @@ export const TabChip = memo(function TabChip({
       </div>
     </div>
   );
-});
+}

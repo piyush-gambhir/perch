@@ -38,6 +38,8 @@ export interface Session {
   name: string;
   createdAt: string;
   tabs: StashedTab[];
+  /** True for sessions created by the auto-stash job (so it can append, not duplicate). */
+  auto?: boolean;
 }
 
 /** A record of a recent close, kept so it can be undone. */

@@ -1,6 +1,6 @@
 /** Perch dashboard — the new-tab page. Composes hooks + components. */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette, type PaletteItem } from '../../components/CommandPalette';
 import { DomainCard } from '../../components/DomainCard';
 import { DupeBanner } from '../../components/DupeBanner';
@@ -32,8 +32,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   renameWorkspace,
-  setActiveWorkspaceId,
-  setWorkspaceTabs,
+  switchWorkspace,
 } from '../../utils/workspaces';
 import { deleteRoutine, openRoutine, renameRoutine, saveRoutine } from '../../utils/routines';
 import { displayTitle, friendlyDomain, getDateDisplay, getGreeting } from '../../utils/format';
@@ -60,7 +59,6 @@ import {
   focusTab,
   groupTabsInBrowser,
   openUrl,
-  openUrls,
   suspendInactiveTabs,
   ungroupTabsInBrowser,
 } from '../../utils/tabs';
@@ -113,6 +111,7 @@ function Dashboard() {
   const [dupeDismissed, setDupeDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
+  const switchingRef = useRef(false);
 
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
@@ -277,16 +276,17 @@ function Dashboard() {
   };
 
   const handleSwitchWorkspace = async (targetId: string) => {
-    if (targetId === activeWorkspaceId) return;
-    const target = workspaces.find((w) => w.id === targetId);
-    if (!target) return;
-    // Save the current window into the active workspace so nothing is lost.
-    if (activeWorkspaceId) await setWorkspaceTabs(activeWorkspaceId, toStashedTabs(realTabs));
-    await closeTabsByIds(idsOf(realTabs));
-    await openUrls(target.tabs.map((t) => t.url));
-    await setActiveWorkspaceId(targetId);
-    showToast(`Switched to ${target.name}`);
-    await refresh();
+    if (switchingRef.current || targetId === activeWorkspaceId) return;
+    switchingRef.current = true;
+    try {
+      const name = await switchWorkspace(targetId);
+      if (name) {
+        showToast(`Switched to ${name}`);
+        await refresh();
+      }
+    } finally {
+      switchingRef.current = false;
+    }
   };
 
   const handleCreateWorkspace = async () => {
@@ -410,16 +410,37 @@ function Dashboard() {
 
   const clearSelection = () => setSelected(new Set());
 
-  const selectedTabInfos = (): { url: string; title: string }[] =>
-    realTabs
-      .filter((t) => t.id !== undefined && selected.has(t.id))
-      .map((t) => ({ url: t.url, title: t.title }));
+  // A chip is shown once per URL (deduped), so a selected chip represents every open
+  // tab with that URL. Expand the selection to all those tab ids before acting.
+  const selectedUrlSet = (): Set<string> =>
+    new Set(realTabs.filter((t) => t.id !== undefined && selected.has(t.id)).map((t) => t.url));
+
+  const expandedSelectedIds = (): number[] => {
+    const urls = selectedUrlSet();
+    return realTabs
+      .filter((t) => urls.has(t.url))
+      .map((t) => t.id)
+      .filter((id): id is number => id !== undefined);
+  };
+
+  const selectedTabInfos = (): { url: string; title: string }[] => {
+    const urls = selectedUrlSet();
+    const seen = new Set<string>();
+    const out: { url: string; title: string }[] = [];
+    for (const t of realTabs) {
+      if (urls.has(t.url) && !seen.has(t.url)) {
+        seen.add(t.url);
+        out.push({ url: t.url, title: t.title });
+      }
+    }
+    return out;
+  };
 
   const handleBulkStash = async () => {
     const tabs = toStashedTabs(selectedTabInfos());
     if (tabs.length === 0) return;
     await saveSession('Selected tabs', tabs);
-    await closeTabsByIds([...selected]);
+    await closeTabsByIds(expandedSelectedIds());
     clearSelection();
     showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
@@ -429,7 +450,7 @@ function Dashboard() {
     const tabs = selectedTabInfos();
     if (tabs.length === 0) return;
     for (const t of tabs) await deferred.save(t);
-    await closeTabsByIds([...selected]);
+    await closeTabsByIds(expandedSelectedIds());
     clearSelection();
     showToast(`Saved ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
@@ -438,7 +459,7 @@ function Dashboard() {
   const handleBulkClose = async () => {
     const stashed = toStashedTabs(selectedTabInfos());
     if (stashed.length === 0) return;
-    await closeTabsByIds([...selected]);
+    await closeTabsByIds(expandedSelectedIds());
     await pushClosed(`${stashed.length} tabs`, stashed);
     clearSelection();
     showToast(`Closed ${stashed.length} tab${stashed.length !== 1 ? 's' : ''}`, () => handleUndo());
@@ -566,6 +587,7 @@ function Dashboard() {
                   key={group.domain}
                   group={group}
                   selectedIds={selected}
+                  selecting={selectMode || selected.size > 0}
                   onToggleSelect={toggleSelect}
                   onCloseGroup={handleCloseGroup}
                   onStashGroup={handleStashGroup}

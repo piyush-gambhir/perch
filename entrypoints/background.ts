@@ -10,7 +10,7 @@ import { saveTabForLater } from '../utils/storage';
 import { appendOrCreateSession, saveSession, toStashedTabs } from '../utils/sessions';
 import { getSettings } from '../utils/settings';
 import { staleTabs } from '../utils/stale';
-import { closeTabsByIds, countRealTabs, fetchOpenTabs } from '../utils/tabs';
+import { closeTabsByIds, countRealTabs, fetchOpenTabs, isInternalUrl } from '../utils/tabs';
 
 const AUTO_STASH_ALARM = 'perch-auto-stash';
 const CTX_STASH = 'perch-ctx-stash';
@@ -46,7 +46,7 @@ async function runAutoStash(): Promise<void> {
   const settings = await getSettings();
   if (!settings.autoStash) return;
   const tabs = await fetchOpenTabs();
-  const real = tabs.filter((t) => !t.isPerchTab);
+  const real = tabs.filter((t) => !t.isPerchTab && !isInternalUrl(t.url));
   const stale = staleTabs(real, Date.now(), settings.staleDays); // excludes active + suspended
   if (stale.length === 0) return;
   const stashed = toStashedTabs(stale);

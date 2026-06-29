@@ -1,6 +1,6 @@
 /** One domain group rendered as a card: title, tab/dupe badges, chips, actions. */
 
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import { friendlyDomain } from '../utils/format';
 import { duplicateInfo, uniqueByUrl } from '../utils/grouping';
 import { tabGroupColor } from '../utils/tabs';
@@ -14,6 +14,7 @@ const VISIBLE_LIMIT = 8;
 interface DomainCardProps {
   group: DomainGroup;
   selectedIds: Set<number>;
+  selecting: boolean;
   onToggleSelect: (id: number) => void;
   onCloseGroup: (group: DomainGroup) => void;
   onStashGroup: (group: DomainGroup) => void;
@@ -25,9 +26,10 @@ interface DomainCardProps {
   onUngroup: (group: DomainGroup) => void;
 }
 
-export const DomainCard = memo(function DomainCard({
+export function DomainCard({
   group,
   selectedIds,
+  selecting,
   onToggleSelect,
   onCloseGroup,
   onStashGroup,
@@ -95,6 +97,7 @@ export const DomainCard = memo(function DomainCard({
               domain={group.domain}
               count={urlCounts[tab.url] || 1}
               selected={tab.id !== undefined && selectedIds.has(tab.id)}
+              selecting={selecting}
               onToggleSelect={onToggleSelect}
               onFocus={onFocus}
               onSave={onSave}
@@ -147,4 +150,4 @@ export const DomainCard = memo(function DomainCard({
       </div>
     </div>
   );
-});
+}

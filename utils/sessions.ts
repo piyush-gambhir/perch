@@ -72,14 +72,21 @@ export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<
 export async function appendOrCreateSession(name: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
   await mutateSynced<Session>(SESSIONS_KEY, (list) => {
-    const existing = list.find((s) => s.name === name);
+    // Match the auto-stash session by its flag + name, so a user-renamed stash can't collide.
+    const existing = list.find((s) => s.auto && s.name === name);
     if (existing) {
       const seen = new Set(existing.tabs.map((t) => t.url));
       const added = tabs.filter((t) => !seen.has(t.url));
       if (!added.length) return list;
       return list.map((s) => (s.id === existing.id ? { ...s, tabs: [...s.tabs, ...added] } : s));
     }
-    const session: Session = { id: uid(), name, createdAt: new Date().toISOString(), tabs };
+    const session: Session = {
+      id: uid(),
+      name,
+      createdAt: new Date().toISOString(),
+      tabs,
+      auto: true,
+    };
     return [session, ...list];
   });
 }
