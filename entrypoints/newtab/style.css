@@ -1,7 +1,17 @@
 /* ============================================================
-   Tab Out — Soft-Modern design system
+   Perch — Soft-Modern design system
    Token-based, light + dark via prefers-color-scheme.
    ============================================================ */
+
+/* Self-hosted Inter (bundled) — no external font fetch, so the page makes zero
+   network calls of its own (favicons aside). */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/InterVariable.woff2') format('woff2');
+}
 
 :root {
   --bg: #f4f5f7;

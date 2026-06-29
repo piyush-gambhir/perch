@@ -37,11 +37,11 @@ entirely on your device.
 
 ## Network requests
 
-The only network requests Perch makes are to load **favicons** (small site icons)
-from Google's public favicon service (`https://www.google.com/s2/favicons`) and the
-**Inter web font** from Google Fonts, purely to render the interface. No personal
-data is included in these requests beyond the website domain whose icon is being
-displayed.
+The interface font (Inter) is bundled with the extension, so it is never fetched from
+the network. The only network requests Perch makes are to load **favicons** (small
+site icons) from Google's public favicon service (`https://www.google.com/s2/favicons`)
+to render each tab's icon. No personal data is included beyond the website domain
+whose icon is being displayed.
 
 ## Data deletion
 
