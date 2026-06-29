@@ -253,11 +253,22 @@ export function discardableCount(tabs: TabInfo[]): number {
 
 /** Discard all inactive, non-discarded real tabs. Returns how many were suspended. */
 export async function suspendInactiveTabs(): Promise<number> {
+  return suspendWhere(() => true);
+}
+
+/** Focus mode: suspend every inactive real tab whose id is NOT in `keepIds`. */
+export async function suspendTabsExcept(keepIds: (number | undefined)[]): Promise<number> {
+  const keep = new Set(keepIds.filter((id): id is number => id !== undefined));
+  return suspendWhere((id) => !keep.has(id));
+}
+
+async function suspendWhere(predicate: (id: number) => boolean): Promise<number> {
   const tabs = await browser.tabs.query({});
   let count = 0;
   for (const t of tabs) {
     const url = t.url ?? '';
     if (t.active || t.discarded || isInternalUrl(url) || t.id === undefined) continue;
+    if (!predicate(t.id)) continue;
     try {
       await browser.tabs.discard(t.id);
       count += 1;

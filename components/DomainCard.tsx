@@ -24,6 +24,7 @@ interface DomainCardProps {
   onCloseTab: (url: string) => void;
   onGroupInBrowser: (group: DomainGroup) => void;
   onUngroup: (group: DomainGroup) => void;
+  onFocusGroup: (group: DomainGroup) => void;
 }
 
 export function DomainCard({
@@ -39,6 +40,7 @@ export function DomainCard({
   onCloseTab,
   onGroupInBrowser,
   onUngroup,
+  onFocusGroup,
 }: DomainCardProps) {
   const [closing, setClosing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -122,6 +124,13 @@ export function DomainCard({
           >
             <StashIcon />
             Stash
+          </button>
+          <button
+            className="action-btn"
+            onClick={() => onFocusGroup(group)}
+            title="Suspend every other tab to focus on this group"
+          >
+            Focus
           </button>
           <button className="action-btn close-tabs" onClick={handleCloseGroup}>
             <CloseIcon />

@@ -61,6 +61,7 @@ import {
   groupTabsInBrowser,
   openUrl,
   suspendInactiveTabs,
+  suspendTabsExcept,
   ungroupTabsInBrowser,
 } from '../../utils/tabs';
 import type { DomainGroup, TabInfo } from '../../utils/types';
@@ -341,6 +342,14 @@ function Dashboard() {
     await refresh();
   };
 
+  const handleFocusGroup = async (group: DomainGroup) => {
+    const n = await suspendTabsExcept(idsOf(group.tabs));
+    showToast(
+      n > 0 ? `Focused — suspended ${n} other tab${n !== 1 ? 's' : ''}` : 'Nothing else to suspend',
+    );
+    await refresh();
+  };
+
   const handleGroupInBrowser = async (group: DomainGroup) => {
     await groupTabsInBrowser(group.tabs, groupLabel(group));
     showToast('Grouped in browser');
@@ -425,9 +434,20 @@ function Dashboard() {
           run: () => openUrl(h.url),
         };
       });
-    return [...tabItems, ...savedItems, ...sessionItems, ...historyItems];
+    // Verb actions — run a command straight from the palette.
+    const actionItems: PaletteItem[] = [
+      { id: 'act-stash-all', title: 'Stash all tabs', subtitle: 'Command', kind: 'action', run: handleStashAll },
+      { id: 'act-close-all', title: 'Close all tabs', subtitle: 'Command', kind: 'action', run: handleCloseAll },
+      { id: 'act-suspend', title: 'Suspend inactive tabs', subtitle: 'Command', kind: 'action', run: handleSuspend },
+      { id: 'act-new-ws', title: 'New workspace', subtitle: 'Command', kind: 'action', run: handleCreateWorkspace },
+      { id: 'act-settings', title: 'Open settings', subtitle: 'Command', kind: 'action', run: () => setSettingsOpen(true) },
+      ...(recentlyClosed.length > 0
+        ? [{ id: 'act-undo', title: 'Undo last close', subtitle: 'Command', kind: 'action' as const, run: handleUndo }]
+        : []),
+    ];
+    return [...tabItems, ...savedItems, ...sessionItems, ...actionItems, ...historyItems];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realTabs, deferred.active, sessions, history]);
+  }, [realTabs, deferred.active, sessions, history, recentlyClosed.length]);
 
   const toggleSelect = (id: number) =>
     setSelected((prev) => {
@@ -626,6 +646,7 @@ function Dashboard() {
                   onCloseTab={handleCloseTab}
                   onGroupInBrowser={handleGroupInBrowser}
                   onUngroup={handleUngroup}
+                  onFocusGroup={handleFocusGroup}
                 />
               ))
             ) : (
