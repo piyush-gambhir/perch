@@ -3,6 +3,7 @@
  * user across devices (storage.sync) with a local source-of-truth fallback. No server.
  */
 
+import { recordHistory } from './history';
 import { uid } from './id';
 import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
 import type { DeferredTab, SavedTabs } from './types';
@@ -11,6 +12,7 @@ const KEY = 'deferred';
 
 /** Save a single tab to the checklist. */
 export async function saveTabForLater(tab: { url: string; title: string }): Promise<void> {
+  void recordHistory([tab]);
   const item: DeferredTab = {
     id: uid(),
     url: tab.url,

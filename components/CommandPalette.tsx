@@ -10,7 +10,7 @@ export interface PaletteItem {
   id: string;
   title: string;
   subtitle: string;
-  kind: 'tab' | 'saved' | 'session';
+  kind: 'tab' | 'saved' | 'session' | 'history' | 'action';
   hostname?: string;
   run: () => void;
 }
@@ -25,6 +25,8 @@ const KIND_LABEL: Record<PaletteItem['kind'], string> = {
   tab: 'Open',
   saved: 'Saved',
   session: 'Stash',
+  history: 'Recall',
+  action: 'Action',
 };
 
 function scoreMatch(haystack: string, query: string): number {

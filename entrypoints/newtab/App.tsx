@@ -22,6 +22,7 @@ import { StaleBanner } from '../../components/StaleBanner';
 import { ToastProvider, useToast } from '../../components/Toast';
 import { WorkspaceBar } from '../../components/WorkspaceBar';
 import { useDeferred } from '../../hooks/useDeferred';
+import { useHistory } from '../../hooks/useHistory';
 import { useRoutines } from '../../hooks/useRoutines';
 import { useSessions } from '../../hooks/useSessions';
 import { useSettings } from '../../hooks/useSettings';
@@ -99,6 +100,7 @@ function Dashboard() {
   const { realTabs, groups, tabOutCount, refresh } = useTabs();
   const deferred = useDeferred();
   const { sessions, recentlyClosed } = useSessions();
+  const { history, refresh: refreshHistory } = useHistory();
   const { routines } = useRoutines();
   const { workspaces, activeId: activeWorkspaceId } = useWorkspaces();
   const { settings, update: updateSettings } = useSettings();
@@ -121,6 +123,11 @@ function Dashboard() {
   );
   const canSuspend = useMemo(() => discardableCount(realTabs), [realTabs]);
 
+  const openPalette = () => {
+    void refreshHistory();
+    setPaletteOpen(true);
+  };
+
   // Keyboard: Cmd/Ctrl+K or "/" opens the command palette.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -129,15 +136,19 @@ function Dashboard() {
         (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setPaletteOpen((o) => !o);
+        setPaletteOpen((o) => {
+          if (!o) void refreshHistory();
+          return !o;
+        });
       } else if (e.key === '/' && !typing && !paletteOpen) {
         e.preventDefault();
+        void refreshHistory();
         setPaletteOpen(true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paletteOpen]);
+  }, [paletteOpen, refreshHistory]);
 
   const groupLabel = (g: DomainGroup) =>
     g.domain === LANDING_PAGES_KEY ? 'Homepages' : g.label || friendlyDomain(g.domain);
@@ -396,9 +407,27 @@ function Dashboard() {
       kind: 'session',
       run: () => handleRestoreSession(s.id),
     }));
-    return [...tabItems, ...savedItems, ...sessionItems];
+    // Durable recall: pages Perch has held that aren't already shown above.
+    const liveUrls = new Set<string>([
+      ...realTabs.map((t) => t.url),
+      ...deferred.active.map((d) => d.url),
+    ]);
+    const historyItems: PaletteItem[] = history
+      .filter((h) => !liveUrls.has(h.url))
+      .map((h) => {
+        const hostname = hostOf(h.url);
+        return {
+          id: `hist-${h.url}`,
+          title: h.title || h.url,
+          subtitle: hostname,
+          kind: 'history',
+          hostname,
+          run: () => openUrl(h.url),
+        };
+      });
+    return [...tabItems, ...savedItems, ...sessionItems, ...historyItems];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realTabs, deferred.active, sessions]);
+  }, [realTabs, deferred.active, sessions, history]);
 
   const toggleSelect = (id: number) =>
     setSelected((prev) => {
@@ -476,7 +505,7 @@ function Dashboard() {
         <div className="toolbar">
           <button
             className="search-field"
-            onClick={() => setPaletteOpen(true)}
+            onClick={openPalette}
             aria-label="Search tabs, saved, and stashes"
           >
             <SearchIcon />

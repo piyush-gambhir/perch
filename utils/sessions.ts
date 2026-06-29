@@ -7,6 +7,7 @@
 
 import { browser } from 'wxt/browser';
 import { reorderById } from './dnd';
+import { recordHistory } from './history';
 import { uid } from './id';
 import { withLock } from './locks';
 import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
@@ -33,6 +34,7 @@ export async function getSessions(): Promise<Session[]> {
 
 export async function saveSession(name: string, tabs: StashedTab[]): Promise<Session | null> {
   if (tabs.length === 0) return null;
+  void recordHistory(tabs);
   const session: Session = {
     id: uid(),
     name: name.trim() || 'Untitled stash',
@@ -55,6 +57,7 @@ export async function renameSession(id: string, name: string): Promise<void> {
 
 /** Append tabs to an existing session (used by drag-and-drop), de-duplicating by URL. */
 export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<void> {
+  void recordHistory(tabs);
   await mutateSynced<Session>(SESSIONS_KEY, (list) =>
     list.map((s) => {
       if (s.id !== id) return s;
@@ -71,6 +74,7 @@ export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<
  */
 export async function appendOrCreateSession(name: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
+  void recordHistory(tabs);
   await mutateSynced<Session>(SESSIONS_KEY, (list) => {
     // Match the auto-stash session by its flag + name, so a user-renamed stash can't collide.
     const existing = list.find((s) => s.auto && s.name === name);
@@ -134,6 +138,7 @@ export async function getRecentlyClosed(): Promise<ClosedRecord[]> {
 /** Record a close so it can be undone. Newest first, capped. */
 export async function pushClosed(label: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
+  void recordHistory(tabs);
   const record: ClosedRecord = { id: uid(), closedAt: new Date().toISOString(), label, tabs };
   await withLock(`perch-store:${CLOSED_KEY}`, async () => {
     const existing = await getRecentlyClosed();
