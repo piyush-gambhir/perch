@@ -1,0 +1,59 @@
+name: Publish to Chrome Web Store
+
+# Manual trigger, or push a version tag like v1.0.1
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Publish target
+        type: choice
+        default: trustedTesters
+        options: [trustedTesters, default]
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck + test
+        run: pnpm test
+
+      - name: Build + zip
+        run: pnpm zip
+
+      - name: Resolve version + target
+        id: meta
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "target=${{ github.event.inputs.target || 'trustedTesters' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to Chrome Web Store
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: >
+          pnpm dlx chrome-webstore-upload-cli@3 upload
+          --source .output/perch-extension-${{ steps.meta.outputs.version }}-chrome.zip
+
+      - name: Publish (${{ steps.meta.outputs.target }})
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: >
+          pnpm dlx chrome-webstore-upload-cli@3 publish
+          --target ${{ steps.meta.outputs.target }}

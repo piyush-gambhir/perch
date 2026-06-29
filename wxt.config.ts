@@ -7,7 +7,7 @@ export default defineConfig({
     name: 'Perch',
     description:
       'A calm home for your tabs. New tab page that groups your open tabs by domain and lets you close them with style.',
-    version: '1.0.0',
+    // version is taken from package.json by WXT — bump it there for releases.
     permissions: ['tabs', 'storage', 'tabGroups', 'alarms', 'contextMenus'],
     chrome_url_overrides: {
       newtab: 'newtab.html',

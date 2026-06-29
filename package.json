@@ -20,7 +20,10 @@
     "test": "pnpm run typecheck && vitest run",
     "typecheck": "tsc --noEmit",
     "zip": "pnpm run generate:icons && wxt zip",
-    "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox"
+    "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox",
+    "cws:upload": "pnpm zip && pnpm dlx chrome-webstore-upload-cli@3 upload --source .output/perch-extension-$npm_package_version-chrome.zip",
+    "cws:publish": "pnpm dlx chrome-webstore-upload-cli@3 publish --target trustedTesters",
+    "release:store": "pnpm run cws:upload && pnpm run cws:publish"
   },
   "dependencies": {
     "react": "^19.2.7",
