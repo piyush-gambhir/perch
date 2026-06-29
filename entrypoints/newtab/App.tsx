@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CommandPalette, type PaletteItem } from '../../components/CommandPalette';
 import { DomainCard } from '../../components/DomainCard';
 import { DupeBanner } from '../../components/DupeBanner';
+import { FirstRunTour } from '../../components/FirstRunTour';
 import {
   CheckIcon,
   CloseIcon,
@@ -19,11 +20,21 @@ import { Sessions } from '../../components/Sessions';
 import { SettingsModal } from '../../components/SettingsModal';
 import { StaleBanner } from '../../components/StaleBanner';
 import { ToastProvider, useToast } from '../../components/Toast';
+import { WorkspaceBar } from '../../components/WorkspaceBar';
 import { useDeferred } from '../../hooks/useDeferred';
 import { useRoutines } from '../../hooks/useRoutines';
 import { useSessions } from '../../hooks/useSessions';
 import { useSettings } from '../../hooks/useSettings';
+import { useFirstRun } from '../../hooks/useFirstRun';
 import { useTabs } from '../../hooks/useTabs';
+import { useWorkspaces } from '../../hooks/useWorkspaces';
+import {
+  createWorkspace,
+  deleteWorkspace,
+  renameWorkspace,
+  setActiveWorkspaceId,
+  setWorkspaceTabs,
+} from '../../utils/workspaces';
 import { deleteRoutine, openRoutine, renameRoutine, saveRoutine } from '../../utils/routines';
 import { displayTitle, friendlyDomain, getDateDisplay, getGreeting } from '../../utils/format';
 import type { DragTab } from '../../utils/dnd';
@@ -49,6 +60,7 @@ import {
   focusTab,
   groupTabsInBrowser,
   openUrl,
+  openUrls,
   suspendInactiveTabs,
   ungroupTabsInBrowser,
 } from '../../utils/tabs';
@@ -90,7 +102,9 @@ function Dashboard() {
   const deferred = useDeferred();
   const { sessions, recentlyClosed } = useSessions();
   const { routines } = useRoutines();
+  const { workspaces, activeId: activeWorkspaceId } = useWorkspaces();
   const { settings, update: updateSettings } = useSettings();
+  const firstRun = useFirstRun();
   const showToast = useToast();
 
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -260,6 +274,33 @@ function Dashboard() {
   const handleDeleteRoutine = async (id: string) => {
     await deleteRoutine(id);
     showToast('Routine deleted');
+  };
+
+  const handleSwitchWorkspace = async (targetId: string) => {
+    if (targetId === activeWorkspaceId) return;
+    const target = workspaces.find((w) => w.id === targetId);
+    if (!target) return;
+    // Save the current window into the active workspace so nothing is lost.
+    if (activeWorkspaceId) await setWorkspaceTabs(activeWorkspaceId, toStashedTabs(realTabs));
+    await closeTabsByIds(idsOf(realTabs));
+    await openUrls(target.tabs.map((t) => t.url));
+    await setActiveWorkspaceId(targetId);
+    showToast(`Switched to ${target.name}`);
+    await refresh();
+  };
+
+  const handleCreateWorkspace = async () => {
+    const ws = await createWorkspace('Workspace');
+    showToast(`Created ${ws.name} — double-click to rename`);
+  };
+
+  const handleRenameWorkspace = async (id: string, name: string) => {
+    await renameWorkspace(id, name);
+  };
+
+  const handleDeleteWorkspace = async (id: string) => {
+    await deleteWorkspace(id);
+    showToast('Workspace deleted');
   };
 
   const handleStashStale = async (tabs: TabInfo[]) => {
@@ -454,6 +495,17 @@ function Dashboard() {
         </div>
       </header>
 
+      {workspaces.length > 0 && (
+        <WorkspaceBar
+          workspaces={workspaces}
+          activeId={activeWorkspaceId}
+          onSwitch={handleSwitchWorkspace}
+          onCreate={handleCreateWorkspace}
+          onRename={handleRenameWorkspace}
+          onDelete={handleDeleteWorkspace}
+        />
+      )}
+
       {tabOutCount > 1 && !dupeDismissed && (
         <DupeBanner
           count={tabOutCount}
@@ -596,6 +648,7 @@ function Dashboard() {
         onChange={updateSettings}
         onClose={() => setSettingsOpen(false)}
       />
+      {firstRun.show && <FirstRunTour onDismiss={firstRun.dismiss} />}
     </div>
   );
 }

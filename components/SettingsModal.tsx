@@ -1,8 +1,10 @@
-/** Settings modal — theme and stale threshold. */
+/** Settings modal — theme, stale threshold, and data export/import. */
 
 import { useEffect, useRef } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { downloadBackup, importAll } from '../utils/backup';
 import type { Settings, Theme } from '../utils/settings';
+import { useToast } from './Toast';
 
 interface SettingsModalProps {
   open: boolean;
@@ -60,7 +62,28 @@ function Toggle({
 
 export function SettingsModal({ open, settings, onChange, onClose }: SettingsModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const showToast = useToast();
   useFocusTrap(open, dialogRef);
+
+  const handleExport = async () => {
+    try {
+      await downloadBackup();
+      showToast('Backup downloaded');
+    } catch {
+      showToast('Export failed');
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const summary = await importAll(JSON.parse(text));
+      showToast(summary);
+    } catch {
+      showToast('Import failed — not a valid Perch backup');
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -131,6 +154,32 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
                 aria-label="Stale threshold in days"
               />
               <span className="setting-value">{settings.staleDays}d</span>
+            </div>
+          </div>
+
+          <div className="setting-row">
+            <div className="setting-label">
+              Backup
+              <span className="setting-hint">Export or import all your data as a file</span>
+            </div>
+            <div className="bulk-actions">
+              <button className="action-btn" onClick={handleExport}>
+                Export
+              </button>
+              <button className="action-btn" onClick={() => fileRef.current?.click()}>
+                Import
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportFile(file);
+                  e.target.value = '';
+                }}
+              />
             </div>
           </div>
         </div>

@@ -159,6 +159,13 @@ export async function openUrl(url: string): Promise<void> {
   await browser.tabs.create({ url, active: true });
 }
 
+/** Open many URLs as background tabs (used to restore a workspace). */
+export async function openUrls(urls: string[]): Promise<void> {
+  for (const url of urls) {
+    if (url) await browser.tabs.create({ url, active: false });
+  }
+}
+
 /** Focus the tab with the given URL (exact, then hostname fallback), across windows. */
 export async function focusTab(url: string): Promise<void> {
   if (!url) return;

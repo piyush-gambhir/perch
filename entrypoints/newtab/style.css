@@ -1604,6 +1604,185 @@ footer {
   }
 }
 
+/* ============================================================ FIRST-RUN TOUR */
+
+.tour-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+}
+
+.tour-head {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.tour-mark {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+
+.tour-head h2 {
+  font-size: 19px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.tour-head p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.tour-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 0 20px;
+}
+
+.tour-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.tour-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.tour-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tour-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.tour-body {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+.tour-cta {
+  width: 100%;
+}
+
+/* ============================================================ WORKSPACES */
+
+.workspace-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.ws-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.ws-pill.active {
+  background: var(--accent);
+}
+
+.ws-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ws-pill.active .ws-name {
+  color: var(--accent-contrast);
+}
+
+.ws-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.ws-del {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 8px 0 0;
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.ws-del:hover {
+  opacity: 1;
+}
+
+.ws-rename {
+  border: none;
+  outline: none;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 999px;
+  width: 110px;
+}
+
+.ws-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ws-add:hover {
+  color: var(--text);
+}
+
+.ws-add svg {
+  width: 15px;
+  height: 15px;
+}
+
 /* ============================================================ RESPONSIVE */
 
 @media (max-width: 900px) {

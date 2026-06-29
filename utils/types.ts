@@ -56,6 +56,13 @@ export interface Routine {
   tabs: StashedTab[];
 }
 
+/** A named tab context you switch between; holds the tabs captured when you left it. */
+export interface Workspace {
+  id: string;
+  name: string;
+  tabs: StashedTab[];
+}
+
 /** A group of tabs shown as one card on the dashboard. */
 export interface DomainGroup {
   /** Hostname, a custom group key, 'tabgroup:<id>', or the '__landing-pages__' sentinel. */
