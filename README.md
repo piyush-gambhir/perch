@@ -57,7 +57,7 @@ HMR, and cross-browser builds.
 - Satisfying **swoosh** sound + **confetti** burst on close (synthesized, no asset files)
 - Time-of-day greeting, toasts, and an "inbox zero" empty state
 - **Live-updating** — the dashboard reflects tab changes in real time
-- **100% local** — no server, no account, no data leaves your machine (only favicons + the web font are fetched)
+- **100% local** — no server, no account, and the UI font is bundled with the extension
 
 **Under the hood**
 
@@ -120,6 +120,11 @@ Edit `utils/config.ts`:
 - `CUSTOM_GROUPS` — merge subdomains / split a site by path into its own card
 
 All grouping logic in `utils/grouping.ts` is pure and unit-tested.
+
+## License
+
+Perch is available under the [MIT License](LICENSE). The bundled Inter font is
+available under the [SIL Open Font License 1.1](public/fonts/Inter-LICENSE.txt).
 
 ---
 
