@@ -114,13 +114,14 @@ function Dashboard() {
   const [dupeDismissed, setDupeDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
+  const [staleReferenceTime] = useState(Date.now);
   const switchingRef = useRef(false);
 
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
   const stale = useMemo(
-    () => staleTabs(realTabs, Date.now(), settings.staleDays),
-    [realTabs, settings.staleDays],
+    () => staleTabs(realTabs, staleReferenceTime, settings.staleDays),
+    [realTabs, settings.staleDays, staleReferenceTime],
   );
   const canSuspend = useMemo(() => discardableCount(realTabs), [realTabs]);
 
@@ -436,13 +437,51 @@ function Dashboard() {
       });
     // Verb actions — run a command straight from the palette.
     const actionItems: PaletteItem[] = [
-      { id: 'act-stash-all', title: 'Stash all tabs', subtitle: 'Command', kind: 'action', run: handleStashAll },
-      { id: 'act-close-all', title: 'Close all tabs', subtitle: 'Command', kind: 'action', run: handleCloseAll },
-      { id: 'act-suspend', title: 'Suspend inactive tabs', subtitle: 'Command', kind: 'action', run: handleSuspend },
-      { id: 'act-new-ws', title: 'New workspace', subtitle: 'Command', kind: 'action', run: handleCreateWorkspace },
-      { id: 'act-settings', title: 'Open settings', subtitle: 'Command', kind: 'action', run: () => setSettingsOpen(true) },
+      {
+        id: 'act-stash-all',
+        title: 'Stash all tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleStashAll,
+      },
+      {
+        id: 'act-close-all',
+        title: 'Close all tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleCloseAll,
+      },
+      {
+        id: 'act-suspend',
+        title: 'Suspend inactive tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleSuspend,
+      },
+      {
+        id: 'act-new-ws',
+        title: 'New workspace',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleCreateWorkspace,
+      },
+      {
+        id: 'act-settings',
+        title: 'Open settings',
+        subtitle: 'Command',
+        kind: 'action',
+        run: () => setSettingsOpen(true),
+      },
       ...(recentlyClosed.length > 0
-        ? [{ id: 'act-undo', title: 'Undo last close', subtitle: 'Command', kind: 'action' as const, run: handleUndo }]
+        ? [
+            {
+              id: 'act-undo',
+              title: 'Undo last close',
+              subtitle: 'Command',
+              kind: 'action' as const,
+              run: handleUndo,
+            },
+          ]
         : []),
     ];
     return [...tabItems, ...savedItems, ...sessionItems, ...actionItems, ...historyItems];
