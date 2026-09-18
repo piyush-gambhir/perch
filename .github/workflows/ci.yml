@@ -5,28 +5,42 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Standard GitHub-hosted runners are free and unlimited on public repositories
+# (ubuntu-latest is 4 vCPU, 16 GB). The three checks run as parallel jobs so
+# the wall clock is the slowest one, not the sum.
 jobs:
   check:
+    name: ${{ matrix.task }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, test, build]
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 11
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
 
       - name: Typecheck
+        if: matrix.task == 'typecheck'
         run: pnpm typecheck
-
       - name: Test
+        if: matrix.task == 'test'
         run: pnpm vitest run
-
       - name: Build
+        if: matrix.task == 'build'
         run: pnpm exec wxt build
