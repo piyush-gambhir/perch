@@ -197,6 +197,7 @@ export async function focusTab(url: string): Promise<void> {
   if (matches.length === 0) return;
 
   const match = matches.find((t) => t.windowId !== currentWindow.id) || matches[0];
+  if (!match) return;
   if (match.id !== undefined) await browser.tabs.update(match.id, { active: true });
   if (match.windowId !== undefined) await browser.windows.update(match.windowId, { focused: true });
 }
@@ -210,6 +211,7 @@ export async function closeDuplicateTabs(urls: string[], keepOne = true): Promis
     const matching = allTabs.filter((t) => t.url === url);
     if (keepOne) {
       const keep = matching.find((t) => t.active) || matching[0];
+      if (!keep) continue;
       for (const tab of matching) {
         if (tab.id !== undefined && tab.id !== keep.id) toClose.push(tab.id);
       }
@@ -233,6 +235,7 @@ export async function closeTabOutDupes(): Promise<void> {
     tabOutTabs.find((t) => t.active && t.windowId === currentWindow.id) ||
     tabOutTabs.find((t) => t.active) ||
     tabOutTabs[0];
+  if (!keep) return;
   const toClose = tabOutTabs
     .filter((t) => t.id !== keep.id)
     .map((t) => t.id)

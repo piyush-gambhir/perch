@@ -45,9 +45,9 @@ describe('groupTabs', () => {
       tab('https://github.com/c/d'),
       tab('https://example.com/x'),
     ]);
-    expect(groups[0].domain).toBe('github.com');
-    expect(groups[0].tabs).toHaveLength(2);
-    expect(groups[1].domain).toBe('example.com');
+    expect(groups[0]?.domain).toBe('github.com');
+    expect(groups[0]?.tabs).toHaveLength(2);
+    expect(groups[1]?.domain).toBe('example.com');
   });
 
   it('pulls homepages into the landing group, sorted first', () => {
@@ -56,13 +56,13 @@ describe('groupTabs', () => {
       tab('https://example.com/y'),
       tab('https://github.com/'),
     ]);
-    expect(groups[0].domain).toBe(LANDING_PAGES_KEY);
-    expect(groups[0].tabs).toHaveLength(1);
+    expect(groups[0]?.domain).toBe(LANDING_PAGES_KEY);
+    expect(groups[0]?.tabs).toHaveLength(1);
   });
 
   it('buckets file:// urls under local-files', () => {
     const groups = groupTabs([tab('file:///Users/me/notes.md')]);
-    expect(groups[0].domain).toBe('local-files');
+    expect(groups[0]?.domain).toBe('local-files');
   });
 
   it('groups native tab-group tabs first, by group title', () => {
@@ -74,15 +74,15 @@ describe('groupTabs', () => {
       ],
       { nativeGroups: [{ id: 5, title: 'Work', color: 'blue' }] },
     );
-    expect(groups[0].domain).toBe('tabgroup:5');
-    expect(groups[0].label).toBe('Work');
-    expect(groups[0].color).toBe('blue');
-    expect(groups[0].tabs).toHaveLength(2);
+    expect(groups[0]?.domain).toBe('tabgroup:5');
+    expect(groups[0]?.label).toBe('Work');
+    expect(groups[0]?.color).toBe('blue');
+    expect(groups[0]?.tabs).toHaveLength(2);
   });
 
   it('ignores groupId with no matching native group', () => {
     const groups = groupTabs([tab('https://a.com/x', '', { groupId: 9 })], { nativeGroups: [] });
-    expect(groups[0].domain).toBe('a.com');
+    expect(groups[0]?.domain).toBe('a.com');
   });
 
   it('splits localhost dev servers by port', () => {

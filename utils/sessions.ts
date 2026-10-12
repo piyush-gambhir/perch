@@ -106,6 +106,7 @@ export async function restoreSession(
 
   if (opts.newWindow) {
     const [first, ...rest] = session.tabs;
+    if (!first) return;
     const win = await browser.windows.create({ url: first.url });
     const windowId = win?.id;
     for (const tab of rest) {
@@ -164,7 +165,9 @@ export async function restoreClosed(id: string): Promise<void> {
 export async function undoLastClose(): Promise<boolean> {
   const existing = await getRecentlyClosed();
   if (existing.length === 0) return false;
-  await restoreClosed(existing[0].id);
+  const latest = existing[0];
+  if (!latest) return false;
+  await restoreClosed(latest.id);
   return true;
 }
 
