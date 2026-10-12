@@ -44,6 +44,7 @@ export async function openRoutine(id: string, opts: { newWindow?: boolean } = {}
 
   if (opts.newWindow) {
     const [first, ...rest] = routine.tabs;
+    if (!first) return;
     const win = await browser.windows.create({ url: first.url });
     const windowId = win?.id;
     for (const tab of rest) await browser.tabs.create({ windowId, url: tab.url, active: false });
