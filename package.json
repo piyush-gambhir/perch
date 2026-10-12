@@ -5,6 +5,10 @@
   "description": "Perch — New tab page that groups your open tabs by domain and lets you close them with style.",
   "author": "Piyush Gambhir",
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "build": "pnpm run generate:icons && wxt build",
     "build:firefox": "pnpm run generate:icons && wxt build -b firefox",

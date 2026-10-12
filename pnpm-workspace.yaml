@@ -4,3 +4,5 @@ allowBuilds:
   sharp: true
   esbuild: true
   spawn-sync: true
+# Do not re-check installed deps before every script run (moved from .npmrc).
+verifyDepsBeforeRun: false
