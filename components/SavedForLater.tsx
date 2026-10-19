@@ -199,6 +199,14 @@ export function SavedForLater({
                       <span className="archive-item-date">
                         {timeAgo(item.completedAt || item.savedAt)}
                       </span>
+                      <button
+                        className="deferred-dismiss archive-dismiss"
+                        title="Delete"
+                        aria-label={`Delete ${item.title || item.url}`}
+                        onClick={() => onDismiss(item.id)}
+                      >
+                        <CloseIcon />
+                      </button>
                     </div>
                   ))
                 ) : (

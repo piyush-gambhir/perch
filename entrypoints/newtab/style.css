@@ -1019,6 +1019,11 @@ header {
   padding: 6px 4px;
 }
 
+.archive-item:hover .archive-dismiss,
+.archive-dismiss:focus-visible {
+  opacity: 1;
+}
+
 .archive-item-title {
   flex: 1;
   min-width: 0;

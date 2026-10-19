@@ -41,3 +41,21 @@ describe('closableTabs', () => {
     expect(closable.map((t) => t.url)).toEqual(['https://a.test/', 'https://c.test/']);
   });
 });
+
+describe('closeDuplicateTabs', () => {
+  it('returns exactly the copies it closed, for undo, and keeps pinned copies', async () => {
+    const { resetFakeBrowser, openTabs, fake } = await import('../fakeBrowser');
+    const { closeDuplicateTabs } = await import('../../utils/tabs');
+    resetFakeBrowser();
+    openTabs(
+      { url: 'https://a.test/', title: 'A1', active: true },
+      { url: 'https://a.test/', title: 'A2' },
+      { url: 'https://a.test/', title: 'A3', pinned: true },
+      { url: 'https://b.test/', title: 'B' },
+    );
+    const closed = await closeDuplicateTabs(['https://a.test/', 'https://b.test/']);
+    // The pinned copy is the one kept, and pinned tabs are never closed.
+    expect(closed.map((t) => t.title).sort()).toEqual(['A1', 'A2']);
+    expect(fake.tabs.map((t) => t.title).sort()).toEqual(['A3', 'B']);
+  });
+});

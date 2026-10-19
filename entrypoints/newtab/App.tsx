@@ -264,8 +264,12 @@ function Dashboard() {
 
   const handleDedup = async (urls: string[]) => {
     if (urls.length === 0) return;
-    await closeDuplicateTabs(urls, true);
-    showToast('Closed duplicates, kept one copy each');
+    const closed = await closeDuplicateTabs(urls, true);
+    await pushClosed('Duplicates', closed);
+    showToast(
+      'Closed duplicates, kept one copy each',
+      closed.length > 0 ? () => handleUndo() : undefined,
+    );
     await refresh();
   };
 
@@ -622,24 +626,26 @@ function Dashboard() {
   const clearSelection = () => setSelected(new Set());
 
   // A chip is shown once per URL (deduped), so a selected chip represents every open
-  // tab with that URL. Expand the selection to all those tab ids before acting.
+  // tab with that URL. Expand the selection to those tabs, minus pinned ones, which
+  // bulk actions never close (and so never stash or save either).
   const selectedUrlSet = (): Set<string> =>
     new Set(realTabs.filter((t) => t.id !== undefined && selected.has(t.id)).map((t) => t.url));
 
-  const expandedSelectedIds = (): number[] => {
+  const selectedClosable = (): TabInfo[] => {
     const urls = selectedUrlSet();
-    return realTabs
-      .filter((t) => urls.has(t.url))
-      .map((t) => t.id)
-      .filter((id): id is number => id !== undefined);
+    return closableTabs(realTabs.filter((t) => urls.has(t.url)));
   };
 
+  const expandedSelectedIds = (): number[] =>
+    selectedClosable()
+      .map((t) => t.id)
+      .filter((id): id is number => id !== undefined);
+
   const selectedTabInfos = (): { url: string; title: string }[] => {
-    const urls = selectedUrlSet();
     const seen = new Set<string>();
     const out: { url: string; title: string }[] = [];
-    for (const t of realTabs) {
-      if (urls.has(t.url) && !seen.has(t.url)) {
+    for (const t of selectedClosable()) {
+      if (!seen.has(t.url)) {
         seen.add(t.url);
         out.push({ url: t.url, title: t.title });
       }
