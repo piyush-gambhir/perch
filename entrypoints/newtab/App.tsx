@@ -490,6 +490,7 @@ function Dashboard() {
           subtitle: hostname || t.url,
           kind: 'tab',
           hostname,
+          url: t.url,
           favIconUrl: t.favIconUrl,
           timestamp: t.lastAccessed,
           run: () => focusTab(t.url),
@@ -505,6 +506,7 @@ function Dashboard() {
         timestamp: Date.parse(d.savedAt),
         kind: 'saved',
         hostname,
+        url: d.url,
         run: () => openUrl(d.url),
       };
     });
@@ -544,6 +546,7 @@ function Dashboard() {
           subtitle: hostname,
           kind: 'history',
           hostname,
+          url: h.url,
           timestamp: h.ts,
           run: () => openUrl(h.url),
         };

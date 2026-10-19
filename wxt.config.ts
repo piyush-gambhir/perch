@@ -9,6 +9,9 @@ export default defineConfig({
       // Firefox only. WXT keeps it on every target, so drop it from other builds to
       // keep the Chrome manifest free of keys Chrome does not use.
       if (wxt.config.browser !== 'firefox') delete manifest.browser_specific_settings;
+      // Firefox has no `favicon` permission or `_favicon` endpoint (see faviconSrc).
+      if (wxt.config.browser === 'firefox')
+        manifest.permissions = manifest.permissions?.filter((p) => p !== 'favicon');
     },
   },
   manifest: {
@@ -16,7 +19,9 @@ export default defineConfig({
     description:
       'A calm home for your tabs. New tab page that groups your open tabs by domain and lets you close them with style.',
     // version is taken from package.json by WXT — bump it there for releases.
-    permissions: ['tabs', 'storage', 'tabGroups', 'alarms', 'contextMenus'],
+    // `favicon` lets pages read the browser's local favicon cache via `_favicon`
+    // (Chrome only), so no favicon is ever fetched from a third party.
+    permissions: ['tabs', 'storage', 'tabGroups', 'alarms', 'contextMenus', 'favicon'],
     chrome_url_overrides: {
       newtab: 'newtab.html',
     },

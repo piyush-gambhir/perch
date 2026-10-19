@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-import { faviconSrc } from '../utils/format';
+import { faviconFor } from '../utils/tabs';
 import { SearchIcon } from './icons';
 
 export interface PaletteItem {
@@ -12,6 +12,8 @@ export interface PaletteItem {
   subtitle: string;
   kind: 'tab' | 'saved' | 'session' | 'workspace' | 'history' | 'action';
   hostname?: string;
+  /** The page this item opens, used for its favicon. */
+  url?: string;
   /** The live tab's own cached favicon, when this item is an open tab. */
   favIconUrl?: string;
   searchText?: string;
@@ -34,6 +36,22 @@ const KIND_LABEL: Record<PaletteItem['kind'], string> = {
   action: 'Action',
 };
 const PALETTE_OPENED_AT = Date.now();
+
+/** The item's local favicon, or the blank placeholder when there is none. */
+function PaletteFavicon({ item }: { item: PaletteItem }) {
+  const src = item.url ? faviconFor(item.url, item.favIconUrl) : '';
+  if (!src) return <span className="palette-favicon" />;
+  return (
+    <img
+      className="palette-favicon"
+      src={src}
+      alt=""
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+      }}
+    />
+  );
+}
 
 function scoreMatch(haystack: string, query: string): number {
   // Lower is better. -1 means no match.
@@ -202,18 +220,7 @@ export function CommandPalette({ open, onClose, items }: CommandPaletteProps) {
                   onClose();
                 }}
               >
-                {item.hostname ? (
-                  <img
-                    className="palette-favicon"
-                    src={faviconSrc(item.hostname, item.favIconUrl)}
-                    alt=""
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
-                    }}
-                  />
-                ) : (
-                  <span className="palette-favicon" />
-                )}
+                <PaletteFavicon item={item} />
                 <span className="palette-item-title">{item.title}</span>
                 <span className="palette-item-sub">{item.subtitle}</span>
                 <span className="palette-item-kind">{KIND_LABEL[item.kind]}</span>

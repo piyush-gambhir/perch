@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanTitle,
+  faviconSrc,
   friendlyDomain,
   smartTitle,
   stripTitleNoise,
@@ -86,5 +87,37 @@ describe('timeAgo', () => {
     expect(timeAgo(new Date('2026-06-29T09:00:00Z').toISOString(), now)).toBe('3 hrs ago');
     expect(timeAgo(new Date('2026-06-28T12:00:00Z').toISOString(), now)).toBe('yesterday');
     expect(timeAgo(new Date('2026-06-26T12:00:00Z').toISOString(), now)).toBe('3 days ago');
+  });
+});
+
+describe('faviconSrc', () => {
+  const extensionUrl = (path: string) => `chrome-extension://perch${path}`;
+  const chrome = { firefox: false, extensionUrl };
+  const firefox = { firefox: true, extensionUrl };
+  const page = 'https://example.com/a?b=1#c';
+
+  it("uses Chrome's local _favicon cache for the page", () => {
+    expect(faviconSrc(page, 'https://example.com/favicon.ico', chrome)).toBe(
+      `chrome-extension://perch/_favicon/?pageUrl=${encodeURIComponent(page)}&size=32`,
+    );
+  });
+
+  it('on Firefox uses only an inline data: favicon, never a remote one', () => {
+    expect(faviconSrc(page, 'data:image/png;base64,AAAA', firefox)).toBe(
+      'data:image/png;base64,AAAA',
+    );
+    expect(faviconSrc(page, 'https://example.com/favicon.ico', firefox)).toBe('');
+    expect(faviconSrc(page, undefined, firefox)).toBe('');
+  });
+
+  it('never points at a third-party favicon service', () => {
+    for (const target of [chrome, firefox]) {
+      for (const icon of [undefined, 'http://tracker.test/i.png?u=1']) {
+        const src = faviconSrc(page, icon, target);
+        expect(src === '' || src.startsWith('chrome-extension://') || src.startsWith('data:')).toBe(
+          true,
+        );
+      }
+    }
   });
 });

@@ -4,6 +4,7 @@
  */
 
 import { browser } from 'wxt/browser';
+import { faviconSrc } from './format';
 import type { NativeGroup, StashedTab, TabInfo } from './types';
 
 const INTERNAL_PREFIXES = [
@@ -18,6 +19,16 @@ const INTERNAL_PREFIXES = [
 /** True for browser-internal / extension pages we never want to show or count. */
 export function isInternalUrl(url: string): boolean {
   return INTERNAL_PREFIXES.some((p) => url.startsWith(p));
+}
+
+/** Local-only favicon src for a page (see faviconSrc); '' means show the fallback. */
+export function faviconFor(pageUrl: string, favIconUrl?: string): string {
+  return faviconSrc(pageUrl, favIconUrl, {
+    firefox: import.meta.env.BROWSER === 'firefox',
+    // `_favicon` is a browser-provided path, not a file in the build, so it is not
+    // part of WXT's typed PublicPath union.
+    extensionUrl: (path) => (browser.runtime.getURL as (path: string) => string)(path),
+  });
 }
 
 /** The URL of Perch's own new-tab page. */
