@@ -43,19 +43,22 @@ describe('closableTabs', () => {
 });
 
 describe('closeDuplicateTabs', () => {
-  it('returns exactly the copies it closed, for undo, and keeps pinned copies', async () => {
-    const { resetFakeBrowser, openTabs, fake } = await import('../fakeBrowser');
+  it('keeps the pinned copy, never closes pinned tabs, and handles repeated URLs once', async () => {
+    const { resetFakeBrowser, openTabs, fake, fakeBrowser } = await import('../fakeBrowser');
     const { closeDuplicateTabs } = await import('../../utils/tabs');
     resetFakeBrowser();
+    const remove = vi.spyOn(fakeBrowser.tabs, 'remove');
     openTabs(
       { url: 'https://a.test/', title: 'A1', active: true },
       { url: 'https://a.test/', title: 'A2' },
       { url: 'https://a.test/', title: 'A3', pinned: true },
       { url: 'https://b.test/', title: 'B' },
     );
-    const closed = await closeDuplicateTabs(['https://a.test/', 'https://b.test/']);
-    // The pinned copy is the one kept, and pinned tabs are never closed.
-    expect(closed.map((t) => t.title).sort()).toEqual(['A1', 'A2']);
+    // Control center passes one URL per duplicate tab, so URLs can repeat.
+    await closeDuplicateTabs(['https://a.test/', 'https://a.test/', 'https://b.test/']);
     expect(fake.tabs.map((t) => t.title).sort()).toEqual(['A3', 'B']);
+    // tabs.remove can reject an id it was already given, so each id goes once.
+    const ids = remove.mock.calls.flatMap(([arg]) => (Array.isArray(arg) ? arg : [arg]));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
