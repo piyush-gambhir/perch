@@ -18,13 +18,24 @@ const SESSIONS_KEY = 'sessions';
 const CLOSED_KEY = 'recentlyClosed';
 const CLOSED_LIMIT = 12;
 
+/** A tab Perch can save and later reopen: a real page, not a browser internal. */
+const isSavable = (t: { url: string }) => !!t.url && !isInternalUrl(t.url);
+
 /** Reduce live tabs to the minimal {url,title} we persist, skipping internals. */
 export function toStashedTabs(
   tabs: { url: string; title: string; pinned?: boolean }[],
 ): StashedTab[] {
   return tabs
-    .filter((t) => t.url && !isInternalUrl(t.url))
+    .filter(isSavable)
     .map((t) => ({ url: t.url, title: t.title || t.url, pinned: t.pinned || undefined }));
+}
+
+/**
+ * The tabs a bulk stash or close may take: never pinned (a deliberate keep), and only
+ * ones toStashedTabs saves, so a bulk action never closes a tab it did not save.
+ */
+export function closableTabs<T extends { url: string; pinned?: boolean }>(tabs: T[]): T[] {
+  return tabs.filter((t) => !t.pinned && isSavable(t));
 }
 
 /* ---- Sessions ---- */

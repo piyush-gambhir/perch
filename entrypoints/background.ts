@@ -7,7 +7,7 @@
 
 import { browser } from 'wxt/browser';
 import { saveTabForLater } from '../utils/storage';
-import { appendOrCreateSession, saveSession, toStashedTabs } from '../utils/sessions';
+import { appendOrCreateSession, closableTabs, saveSession, toStashedTabs } from '../utils/sessions';
 import { getSettings } from '../utils/settings';
 import { staleTabs } from '../utils/stale';
 import {
@@ -244,7 +244,9 @@ export default defineBackground(() => {
       const query = raw.trim();
       const lower = query.toLowerCase();
       if (lower === 'stash') {
-        const tabs = (await fetchOpenTabs()).filter((tab) => !tab.isPerchTab && !tab.pinned);
+        // Close exactly what gets saved: internal pages (and Perch itself) are never
+        // stashed, so they must not be closed either.
+        const tabs = closableTabs(await fetchOpenTabs());
         await saveSession('Omnibox stash', toStashedTabs(tabs));
         await closeTabsByIds(tabs.map((tab) => tab.id));
       } else if (lower === 'suspend') {
