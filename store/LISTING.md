@@ -19,10 +19,10 @@ Perch: Tab Dashboard & New Tab
 ## Summary (132 max)
 
 ```text
-A calm new tab for everything you have open. Group tabs by site, stash and restore sessions, find any tab with ⌘K, undo any close.
+A calm new tab for everything you have open. Group tabs by site, stash and restore sessions, find any tab with ⌘K, and undo closes.
 ```
 
-130 characters. Recount after any edit; the dashboard truncates silently.
+131 characters. Recount after any edit; the dashboard truncates silently.
 
 ## Category and language
 
@@ -36,15 +36,15 @@ Perch turns your new tab page into a calm home for everything you have open.
 If you keep forty tabs open because closing one feels risky, Perch is for you. It groups your tabs by site, makes closing safe with stashes, undo and recovery snapshots, and finds any tab in a keystroke.
 
 ORGANIZE
-• Every open tab, grouped by site and sorted busiest first
+• Every open tab, grouped by site
 • Homepages (Gmail, X, LinkedIn, GitHub, YouTube) collected into one card
-• Chrome's tab groups shown with their colour and name; group or ungroup from any card
+• Chrome's tab groups shown with their colour and name; group or ungroup a site's tabs from its card
 • Workspaces: switch between sets of tabs for different projects
 
 CLOSE WITHOUT FEAR
 • Stash a group, or every tab, as a named session, then close them for real
 • Restore a stash in place or in a new window; drag tabs onto a stash
-• Undo brings back whatever you just closed
+• Undo brings back tabs you close from the dashboard
 • Recovery snapshots every 15 minutes, so you can reopen only the tabs that went missing
 • Pinned tabs are never closed by bulk actions
 
