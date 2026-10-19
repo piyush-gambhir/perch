@@ -1342,6 +1342,43 @@ footer {
   opacity: 1;
 }
 
+/* Row actions overlay the right edge instead of reserving width while hidden, so the
+   name and meta keep the full row in the narrow sidebar. */
+.session-item,
+.deferred-item {
+  position: relative;
+}
+
+.row-actions {
+  position: absolute;
+  top: 11px;
+  right: 6px;
+  display: flex;
+  gap: 2px;
+  padding-left: 8px;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.13s ease;
+}
+
+.deferred-item .row-actions {
+  top: 13px;
+}
+
+.session-item:hover .row-actions,
+.deferred-item:hover .row-actions,
+.row-actions:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.row-actions:focus-within .session-action,
+.row-actions:focus-within .deferred-dismiss {
+  opacity: 1;
+}
+
 .session-action svg {
   width: 15px;
   height: 15px;
@@ -1836,6 +1873,7 @@ footer {
 /* On touch / coarse pointers there is no hover, so reveal row actions permanently. */
 @media (hover: none) {
   .chip-actions,
+  .row-actions,
   .session-action,
   .deferred-dismiss,
   .tab-select {

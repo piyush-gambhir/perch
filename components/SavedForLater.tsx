@@ -102,26 +102,28 @@ export function SavedForLater({
                     <span>{timeAgo(item.savedAt)}</span>
                   </div>
                 </div>
-                <button
-                  className="deferred-dismiss"
-                  title="Tags and note"
-                  aria-label={`Edit tags and note for ${item.title || item.url}`}
-                  onClick={() => {
-                    setDetailsId(detailsId === item.id ? null : item.id);
-                    setTagsDraft((item.tags ?? []).join(', '));
-                    setNoteDraft(item.note ?? '');
-                  }}
-                >
-                  #
-                </button>
-                <button
-                  className="deferred-dismiss"
-                  title="Dismiss"
-                  aria-label={`Dismiss ${item.title || item.url}`}
-                  onClick={() => onDismiss(item.id)}
-                >
-                  <CloseIcon />
-                </button>
+                <div className="row-actions">
+                  <button
+                    className="deferred-dismiss"
+                    title="Tags and note"
+                    aria-label={`Edit tags and note for ${item.title || item.url}`}
+                    onClick={() => {
+                      setDetailsId(detailsId === item.id ? null : item.id);
+                      setTagsDraft((item.tags ?? []).join(', '));
+                      setNoteDraft(item.note ?? '');
+                    }}
+                  >
+                    #
+                  </button>
+                  <button
+                    className="deferred-dismiss"
+                    title="Dismiss"
+                    aria-label={`Dismiss ${item.title || item.url}`}
+                    onClick={() => onDismiss(item.id)}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
                 {detailsId === item.id && (
                   <div className="session-details deferred-details">
                     <input
