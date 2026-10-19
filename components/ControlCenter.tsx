@@ -18,7 +18,11 @@ import {
 } from '../utils/snapshots';
 import { closeDuplicateTabs, suspendInactiveTabs } from '../utils/tabs';
 import type { AutomationAction, AutomationRule, Snapshot, TabInfo } from '../utils/types';
+import { ChevronIcon } from './icons';
 import { useToast } from './Toast';
+
+/** Snapshots listed before "Show all"; every retained one stays reachable. */
+const SNAPSHOT_PREVIEW = 8;
 
 interface Props {
   open: boolean;
@@ -31,6 +35,7 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const overlayDown = useRef(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [showAllSnapshots, setShowAllSnapshots] = useState(false);
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [hostname, setHostname] = useState('');
   const [days, setDays] = useState(7);
@@ -82,6 +87,7 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
     await onRefresh();
   };
 
+  const visibleSnapshots = showAllSnapshots ? snapshots : snapshots.slice(0, SNAPSHOT_PREVIEW);
   const totalSnapshotTabs = (snapshot: Snapshot) =>
     snapshot.windows.reduce((total, window) => total + window.tabs.length, 0);
 
@@ -127,7 +133,7 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
             </button>
           </div>
           <div className="snapshot-list">
-            {snapshots.slice(0, 8).map((snapshot) => (
+            {visibleSnapshots.map((snapshot) => (
               <div className="snapshot-item" key={snapshot.id}>
                 <div>
                   <strong>{new Date(snapshot.createdAt).toLocaleString()}</strong>
@@ -153,6 +159,17 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
                 </button>
               </div>
             ))}
+            {snapshots.length > SNAPSHOT_PREVIEW && (
+              <button
+                className={`archive-toggle${showAllSnapshots ? ' open' : ''}`}
+                aria-expanded={showAllSnapshots}
+                onClick={() => setShowAllSnapshots((v) => !v)}
+              >
+                <ChevronIcon className="archive-chevron" />
+                {showAllSnapshots ? 'Show fewer' : 'Show all'}
+                <span className="archive-count">({snapshots.length})</span>
+              </button>
+            )}
             {!snapshots.length && (
               <div className="deferred-empty">Snapshots appear automatically every 15 minutes.</div>
             )}
