@@ -57,12 +57,12 @@ export function hasTrackingParameters(raw: string): boolean {
 }
 
 export function analyzeTabHealth(tabs: TabInfo[], now = Date.now()): TabHealth {
+  // Exact URLs, the same rule closeDuplicateTabs cleans with, so every reported
+  // duplicate is one the cleanup button can actually close.
   const counts = new Map<string, number>();
-  tabs.forEach((tab) =>
-    counts.set(stripTrackingParams(tab.url), (counts.get(stripTrackingParams(tab.url)) ?? 0) + 1),
-  );
+  tabs.forEach((tab) => counts.set(tab.url, (counts.get(tab.url) ?? 0) + 1));
   return {
-    duplicates: tabs.filter((tab) => (counts.get(stripTrackingParams(tab.url)) ?? 0) > 1),
+    duplicates: tabs.filter((tab) => (counts.get(tab.url) ?? 0) > 1),
     stale: tabs.filter(
       (tab) =>
         !tab.active &&

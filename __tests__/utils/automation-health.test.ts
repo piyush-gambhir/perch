@@ -110,16 +110,26 @@ describe('tab health', () => {
     expect(stripTrackingParams('https://a.test/plain#x')).toBe('https://a.test/plain#x');
   });
 
-  it('finds canonical duplicates, tracking URLs, stale tabs, and discard candidates', () => {
+  it('finds duplicates, tracking URLs, stale tabs, and discard candidates', () => {
     const tabs = [
       tab('https://example.com/page?id=4&utm_source=news', { lastAccessed: NOW - 31 * DAY }),
       tab('https://example.com/page?id=4', { active: true }),
+      tab('https://example.com/page?id=4'),
       tab('https://other.com', { pinned: true, lastAccessed: NOW - 40 * DAY }),
     ];
     const health = analyzeTabHealth(tabs, NOW);
     expect(health.duplicates).toHaveLength(2);
     expect(health.tracking).toHaveLength(1);
     expect(health.stale).toHaveLength(1);
-    expect(health.discardable).toHaveLength(1);
+    expect(health.discardable).toHaveLength(2);
+  });
+
+  it('matches duplicates by exact URL, like the cleanup that closes them', () => {
+    const tabs = [
+      tab('https://example.com/page?utm_source=news'),
+      tab('https://example.com/page'),
+      tab('https://example.com/page#section'),
+    ];
+    expect(analyzeTabHealth(tabs, NOW).duplicates).toEqual([]);
   });
 });
