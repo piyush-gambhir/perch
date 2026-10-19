@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { uid } from './id';
 import { withLock } from './locks';
-import { isInternalUrl, openUrls } from './tabs';
+import { isInternalUrl, openStashedTabs } from './tabs';
 import type { Snapshot, StashedTab } from './types';
 
 const KEY = 'snapshots';
@@ -70,11 +70,8 @@ export async function restoreSnapshot(id: string): Promise<number> {
     const missing = window.tabs.filter((tab) => !open.has(tab.url));
     if (!missing.length) continue;
     const created = await browser.windows.create({});
-    await openUrls(
-      missing.map((tab) => tab.url),
-      created?.id,
-    );
-    restored += missing.length;
+    // openStashedTabs carries each tab's captured `pinned` flag; plain URLs would drop it.
+    restored += (await openStashedTabs(missing, { windowId: created?.id })).opened;
     missing.forEach((tab) => open.add(tab.url));
   }
   return restored;
