@@ -264,12 +264,8 @@ function Dashboard() {
 
   const handleDedup = async (urls: string[]) => {
     if (urls.length === 0) return;
-    const closed = await closeDuplicateTabs(urls, true);
-    await pushClosed('Duplicates', closed);
-    showToast(
-      'Closed duplicates, kept one copy each',
-      closed.length > 0 ? () => handleUndo() : undefined,
-    );
+    await closeDuplicateTabs(urls, true);
+    showToast('Closed duplicates, kept one copy each');
     await refresh();
   };
 

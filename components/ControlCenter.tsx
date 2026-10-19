@@ -16,7 +16,6 @@ import {
   onSnapshotsChanged,
   restoreSnapshot,
 } from '../utils/snapshots';
-import { pushClosed } from '../utils/sessions';
 import { closeDuplicateTabs, suspendInactiveTabs } from '../utils/tabs';
 import type { AutomationAction, AutomationRule, Snapshot, TabInfo } from '../utils/types';
 import { ChevronIcon } from './icons';
@@ -185,8 +184,7 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
           <div className="health-grid">
             <button
               onClick={async () => {
-                const closed = await closeDuplicateTabs(health.duplicates.map((tab) => tab.url));
-                await pushClosed('Duplicates', closed);
+                await closeDuplicateTabs(health.duplicates.map((tab) => tab.url));
                 await onRefresh();
               }}
             >

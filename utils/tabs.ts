@@ -264,35 +264,28 @@ export async function focusTab(url: string): Promise<void> {
 }
 
 /** Close duplicate tabs. keepOne=true keeps one copy of each URL. */
-/** Close extra copies of each URL; returns what was closed so callers can offer undo. */
-export async function closeDuplicateTabs(urls: string[], keepOne = true): Promise<StashedTab[]> {
+/**
+ * Close extra copies of each URL. Not recorded for undo: a copy always stays open,
+ * and restore skips URLs that are already open anyway.
+ */
+export async function closeDuplicateTabs(urls: string[], keepOne = true): Promise<void> {
   const allTabs = await browser.tabs.query({});
   const toClose: number[] = [];
-  const closed: StashedTab[] = [];
 
-  for (const url of urls) {
+  for (const url of new Set(urls)) {
     const matching = allTabs.filter((t) => t.url === url && !t.incognito);
     if (keepOne) {
       // A pinned tab is an explicit keep signal; otherwise preserve the active copy.
       const keep = matching.find((t) => t.pinned) || matching.find((t) => t.active) || matching[0];
       for (const tab of matching) {
-        if (tab.id !== undefined && tab.id !== keep?.id && !tab.pinned) {
-          toClose.push(tab.id);
-          closed.push(stash(tab));
-        }
+        if (tab.id !== undefined && tab.id !== keep?.id && !tab.pinned) toClose.push(tab.id);
       }
     } else {
-      for (const tab of matching) {
-        if (tab.id !== undefined && !tab.pinned) {
-          toClose.push(tab.id);
-          closed.push(stash(tab));
-        }
-      }
+      for (const tab of matching) if (tab.id !== undefined && !tab.pinned) toClose.push(tab.id);
     }
   }
 
   if (toClose.length > 0) await browser.tabs.remove(toClose);
-  return closed;
 }
 
 /** Close all duplicate Tab Out new-tab pages except the current one. */
