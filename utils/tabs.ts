@@ -196,20 +196,6 @@ export async function openUrl(url: string): Promise<void> {
   await browser.tabs.create({ url, active: true });
 }
 
-/** Open many URLs as background tabs. Resilient: one bad URL won't abort the rest. */
-export async function openUrls(urls: string[], windowId?: number): Promise<void> {
-  for (const url of new Set(urls)) {
-    if (!url) continue;
-    try {
-      await browser.tabs.create(
-        windowId !== undefined ? { url, active: false, windowId } : { url, active: false },
-      );
-    } catch {
-      /* skip an unopenable URL */
-    }
-  }
-}
-
 /**
  * Restore metadata-rich tabs, optionally skipping URLs that are already open.
  * `failed` lists the tabs whose URL never opened, so callers can keep those records.
