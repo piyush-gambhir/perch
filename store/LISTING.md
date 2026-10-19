@@ -44,7 +44,7 @@ ORGANIZE
 CLOSE WITHOUT FEAR
 • Stash a group, or every tab, as a named session, then close them for real
 • Restore a stash in place or in a new window; drag tabs onto a stash
-• Undo brings back tabs you close from the dashboard
+• Undo brings back the tabs you close; closing duplicates always keeps one copy
 • Recovery snapshots every 15 minutes, so you can reopen only the tabs that went missing
 • Pinned tabs are never closed by bulk actions
 
