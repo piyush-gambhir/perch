@@ -127,42 +127,44 @@ export function Sessions({
                 <span>{timeAgo(s.createdAt)}</span>
               </div>
             </div>
-            <button
-              className="session-action"
-              title="Tags and note"
-              aria-label={`Edit tags and note for ${s.name}`}
-              onClick={() => {
-                setDetailsId(detailsId === s.id ? null : s.id);
-                setTagsDraft((s.tags ?? []).join(', '));
-                setNoteDraft(s.note ?? '');
-              }}
-            >
-              #
-            </button>
-            <button
-              className="session-action"
-              title="Restore tabs"
-              aria-label={`Restore ${s.name}`}
-              onClick={() => onRestore(s.id)}
-            >
-              <RestoreIcon />
-            </button>
-            <button
-              className="session-action"
-              title="Restore in a new window"
-              aria-label={`Restore ${s.name} in a new window`}
-              onClick={() => onRestoreNewWindow(s.id)}
-            >
-              <NewWindowIcon />
-            </button>
-            <button
-              className="session-action danger"
-              title="Delete stash"
-              aria-label={`Delete ${s.name}`}
-              onClick={() => onDelete(s.id)}
-            >
-              <TrashIcon />
-            </button>
+            <div className="row-actions">
+              <button
+                className="session-action"
+                title="Tags and note"
+                aria-label={`Edit tags and note for ${s.name}`}
+                onClick={() => {
+                  setDetailsId(detailsId === s.id ? null : s.id);
+                  setTagsDraft((s.tags ?? []).join(', '));
+                  setNoteDraft(s.note ?? '');
+                }}
+              >
+                #
+              </button>
+              <button
+                className="session-action"
+                title="Restore tabs"
+                aria-label={`Restore ${s.name}`}
+                onClick={() => onRestore(s.id)}
+              >
+                <RestoreIcon />
+              </button>
+              <button
+                className="session-action"
+                title="Restore in a new window"
+                aria-label={`Restore ${s.name} in a new window`}
+                onClick={() => onRestoreNewWindow(s.id)}
+              >
+                <NewWindowIcon />
+              </button>
+              <button
+                className="session-action danger"
+                title="Delete stash"
+                aria-label={`Delete ${s.name}`}
+                onClick={() => onDelete(s.id)}
+              >
+                <TrashIcon />
+              </button>
+            </div>
             {detailsId === s.id && (
               <div className="session-details">
                 <input
