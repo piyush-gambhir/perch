@@ -11,11 +11,14 @@ import { browser } from 'wxt/browser';
 import { uid } from './id';
 import { withLock } from './locks';
 import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
-import { isInternalUrl, openUrls } from './tabs';
+import { isInternalUrl, openStashedTabs } from './tabs';
 import type { StashedTab, Workspace } from './types';
 
 const WS_KEY = 'workspaces';
 const ACTIVE_KEY = 'activeWorkspace';
+// Tabs of the active workspace that failed to open when it was switched to. They never
+// reached the window, so the next capture must carry them or they would be lost.
+const UNOPENED_KEY = 'activeWorkspaceUnopened';
 
 export async function getWorkspaces(): Promise<Workspace[]> {
   return loadSynced<Workspace>(WS_KEY);
@@ -86,10 +89,19 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     // Pinned tabs are a deliberate keep: they stay open across every workspace, so
     // they are neither captured nor closed (as in the dashboard's bulk actions).
     const real = live.filter((t) => t.url && !isInternalUrl(t.url) && !t.incognito && !t.pinned);
-    const captured: StashedTab[] = real.map((t) => ({
+    const inWindow: StashedTab[] = real.map((t) => ({
       url: t.url as string,
       title: t.title || (t.url as string),
     }));
+    // Add back the active workspace's tabs that failed to open when it was switched to.
+    const { [UNOPENED_KEY]: unopened } = (await browser.storage.local.get(UNOPENED_KEY)) as {
+      [UNOPENED_KEY]?: { id: string; tabs: StashedTab[] };
+    };
+    const inWindowUrls = new Set(inWindow.map((t) => t.url));
+    const captured = [
+      ...inWindow,
+      ...(unopened?.id === activeId ? unopened.tabs.filter((t) => !inWindowUrls.has(t.url)) : []),
+    ];
 
     // Save the current window into the active workspace BEFORE closing anything.
     // An empty capture is saved too: keeping the old list would reopen tabs the user
@@ -115,10 +127,8 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     const ids = real.map((t) => t.id).filter((id): id is number => id !== undefined);
     if (ids.length > 0) await browser.tabs.remove(ids);
 
-    await openUrls(
-      target.tabs.map((t) => t.url),
-      winId,
-    );
+    const { failed } = await openStashedTabs(target.tabs, { windowId: winId });
+    await browser.storage.local.set({ [UNOPENED_KEY]: { id: targetId, tabs: failed } });
     await setActiveWorkspaceId(targetId);
     return target.name;
   });
