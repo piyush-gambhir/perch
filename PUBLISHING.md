@@ -20,10 +20,12 @@ installing on other machines / sharing with testers.
 ## One-time setup (only you can do these)
 
 ### 1. Developer account ($5, once)
+
 Register at the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole)
 and pay the one-time $5 fee.
 
 ### 2. Create the item once, by hand (to get the Extension ID)
+
 The Web Store API can only **update** an existing item, not create a new one — so the
 very first upload is manual:
 
@@ -37,9 +39,11 @@ very first upload is manual:
 5. Submit. Once it's reviewed, copy the **Extension ID** (the long id in the item's URL).
 
 ### 3. API credentials (for automated updates)
+
 Follow Google's flow (≈5 min):
 [How to generate Chrome Web Store API keys](https://github.com/fregante/chrome-webstore-upload/blob/main/How%20to%20generate%20Google%20API%20keys.md).
 In short:
+
 1. [Google Cloud Console](https://console.cloud.google.com) → new project → **enable the
    "Chrome Web Store API"**.
 2. OAuth consent screen (External, add yourself as a test user) → create **OAuth client ID**
@@ -49,14 +53,15 @@ In short:
    prints the refresh token).
 
 ### 4. Add GitHub secrets
+
 Repo → Settings → Secrets and variables → Actions → add:
 
-| Secret | Value |
-|--------|-------|
-| `CWS_EXTENSION_ID` | the Extension ID from step 2 |
-| `CWS_CLIENT_ID` | OAuth client id |
-| `CWS_CLIENT_SECRET` | OAuth client secret |
-| `CWS_REFRESH_TOKEN` | refresh token from step 3 |
+| Secret              | Value                        |
+| ------------------- | ---------------------------- |
+| `CWS_EXTENSION_ID`  | the Extension ID from step 2 |
+| `CWS_CLIENT_ID`     | OAuth client id              |
+| `CWS_CLIENT_SECRET` | OAuth client secret          |
+| `CWS_REFRESH_TOKEN` | refresh token from step 3    |
 
 ---
 
@@ -67,7 +72,7 @@ Repo → Settings → Secrets and variables → Actions → add:
 2. Commit, then either:
    - **Tag-triggered:** `git tag v<version> && git push --tags` → the workflow builds,
      tests, uploads, and **publishes to trusted testers** automatically; or
-   - **Manual:** GitHub → Actions → **Publish to Chrome Web Store** → *Run workflow*
+   - **Manual:** GitHub → Actions → **Publish to Chrome Web Store** → _Run workflow_
      (choose `trustedTesters` or `default`).
 3. Or publish from your machine (with the four values exported as `EXTENSION_ID`,
    `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`): `pnpm release:store`.

@@ -1,8 +1,8 @@
 /** Settings modal — theme, stale threshold, and data export/import. */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-import { downloadBackup, importAll } from '../utils/backup';
+import { decryptBackup, downloadBackup, downloadEncryptedBackup, importAll } from '../utils/backup';
 import type { Settings, Theme } from '../utils/settings';
 import { useToast } from './Toast';
 
@@ -11,6 +11,36 @@ interface SettingsModalProps {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onClose: () => void;
+}
+
+function StaleDaysControl({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const commit = () => {
+    if (draft !== value) onCommit(draft);
+  };
+
+  return (
+    <div className="setting-stepper">
+      <input
+        type="range"
+        min={1}
+        max={30}
+        value={draft}
+        onChange={(e) => setDraft(Number(e.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+        aria-label="Stale threshold in days"
+      />
+      <span className="setting-value">{draft}d</span>
+    </div>
+  );
 }
 
 function Segmented<T extends string>({
@@ -63,6 +93,7 @@ function Toggle({
 export function SettingsModal({ open, settings, onChange, onClose }: SettingsModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const overlayMouseDownRef = useRef(false);
   const showToast = useToast();
   useFocusTrap(open, dialogRef);
 
@@ -78,10 +109,29 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
   const handleImportFile = async (file: File) => {
     try {
       const text = await file.text();
-      const summary = await importAll(JSON.parse(text));
+      let data = JSON.parse(text) as unknown;
+      if ((data as { app?: string })?.app === 'perch-encrypted') {
+        const passphrase = window.prompt('Passphrase for this encrypted Perch backup:');
+        if (!passphrase) return;
+        data = await decryptBackup(data, passphrase);
+      }
+      const summary = await importAll(data);
       showToast(summary);
     } catch {
       showToast('Import failed — not a valid Perch backup');
+    }
+  };
+
+  const handleEncryptedExport = async () => {
+    const passphrase = window.prompt(
+      'Choose a passphrase (8+ characters). It cannot be recovered if forgotten:',
+    );
+    if (!passphrase) return;
+    try {
+      await downloadEncryptedBackup(passphrase);
+      showToast('Encrypted backup downloaded');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Encrypted export failed');
     }
   };
 
@@ -94,17 +144,29 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  const handleOverlayMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    overlayMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayMouseUp = (e: MouseEvent<HTMLDivElement>) => {
+    if (overlayMouseDownRef.current && e.target === e.currentTarget) onClose();
+    overlayMouseDownRef.current = false;
+  };
+
   if (!open) return null;
 
   return (
-    <div className="palette-overlay" onMouseDown={onClose}>
+    <div
+      className="palette-overlay"
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div
         ref={dialogRef}
         className="settings-modal"
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
-        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="settings-head">
           <h2>Settings</h2>
@@ -144,17 +206,11 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
               Stale after
               <span className="setting-hint">Flag tabs untouched this long</span>
             </div>
-            <div className="setting-stepper">
-              <input
-                type="range"
-                min={1}
-                max={30}
-                value={settings.staleDays}
-                onChange={(e) => onChange({ staleDays: Number(e.target.value) })}
-                aria-label="Stale threshold in days"
-              />
-              <span className="setting-value">{settings.staleDays}d</span>
-            </div>
+            <StaleDaysControl
+              key={settings.staleDays}
+              value={settings.staleDays}
+              onCommit={(staleDays) => onChange({ staleDays })}
+            />
           </div>
 
           <div className="setting-row">
@@ -165,6 +221,9 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
             <div className="bulk-actions">
               <button className="action-btn" onClick={handleExport}>
                 Export
+              </button>
+              <button className="action-btn" onClick={handleEncryptedExport}>
+                Export encrypted
               </button>
               <button className="action-btn" onClick={() => fileRef.current?.click()}>
                 Import

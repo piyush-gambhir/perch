@@ -1,9 +1,9 @@
-/** Workspace switcher — pills for each tab context; click to switch, double-click to
- *  rename, hover-x to delete (non-active). */
+/** Workspace switcher — pills for each tab context; click to switch, double-click (or
+ *  the hover pencil) to rename, hover-x to delete (non-active). */
 
 import { useState } from 'react';
 import type { Workspace } from '../utils/types';
-import { PlusIcon } from './icons';
+import { PencilIcon, PlusIcon } from './icons';
 
 interface WorkspaceBarProps {
   workspaces: Workspace[];
@@ -30,8 +30,13 @@ export function WorkspaceBar({
     setEditingId(null);
   };
 
+  const startRename = (id: string, name: string) => {
+    setEditingId(id);
+    setDraft(name);
+  };
+
   return (
-    <div className="workspace-bar" role="tablist" aria-label="Workspaces">
+    <div className="workspace-bar" aria-label="Workspaces">
       {workspaces.map((w) => {
         const active = w.id === activeId;
         return (
@@ -51,19 +56,25 @@ export function WorkspaceBar({
             ) : (
               <button
                 className="ws-name"
-                role="tab"
-                aria-selected={active}
+                aria-pressed={active}
                 onClick={() => !active && onSwitch(w.id)}
-                onDoubleClick={() => {
-                  setEditingId(w.id);
-                  setDraft(w.name);
-                }}
+                onDoubleClick={() => startRename(w.id, w.name)}
                 title={
                   active ? `${w.name} (current — double-click to rename)` : `Switch to ${w.name}`
                 }
               >
                 {w.name}
                 {w.tabs.length > 0 && <span className="ws-count">{w.tabs.length}</span>}
+              </button>
+            )}
+            {editingId !== w.id && (
+              <button
+                className="ws-edit"
+                aria-label={`Rename ${w.name}`}
+                title="Rename workspace"
+                onClick={() => startRename(w.id, w.name)}
+              >
+                <PencilIcon />
               </button>
             )}
             {!active && workspaces.length > 1 && (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { setDragTab } from '../utils/dnd';
-import { displayTitle, faviconUrl } from '../utils/format';
+import { displayTitle, faviconSrc } from '../utils/format';
 import type { TabInfo } from '../utils/types';
 import { BookmarkIcon, CloseIcon } from './icons';
 
@@ -81,7 +81,7 @@ export function TabChip({
       {hostname && (
         <img
           className="chip-favicon"
-          src={faviconUrl(hostname)}
+          src={faviconSrc(hostname, tab.favIconUrl)}
           alt=""
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).style.display = 'none';

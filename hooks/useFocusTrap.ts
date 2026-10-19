@@ -17,7 +17,9 @@ export function useFocusTrap(open: boolean, ref: RefObject<HTMLElement | null>):
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const focusable = () =>
       Array.from(node.querySelectorAll<HTMLElement>(SELECTOR)).filter(
-        (el) => el.offsetParent !== null || el === document.activeElement,
+        (el) =>
+          (el.checkVisibility?.() ?? el.getClientRects().length > 0) ||
+          el === document.activeElement,
       );
 
     // Focus the first control if focus isn't already inside.

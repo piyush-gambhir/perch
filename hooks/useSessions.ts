@@ -23,9 +23,12 @@ export function useSessions(): UseSessions {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const initial = setTimeout(refresh, 0);
     const unsub = onSessionsChanged(refresh);
-    return unsub;
+    return () => {
+      clearTimeout(initial);
+      unsub();
+    };
   }, [refresh]);
 
   return { sessions, recentlyClosed, refresh };

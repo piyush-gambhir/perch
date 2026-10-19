@@ -24,7 +24,7 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
+  const openPromise = new Promise<IDBDatabase>((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
       reject(new Error('no indexedDB'));
       return;
@@ -39,8 +39,12 @@ function openDb(): Promise<IDBDatabase> {
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+  }).catch((error) => {
+    dbPromise = null;
+    throw error;
   });
-  return dbPromise;
+  dbPromise = openPromise;
+  return openPromise;
 }
 
 function tx(db: IDBDatabase, mode: IDBTransactionMode) {

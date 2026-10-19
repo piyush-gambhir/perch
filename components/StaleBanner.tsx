@@ -22,10 +22,10 @@ export function StaleBanner({ count, days, onStash, onClose, onDismiss }: StaleB
         </div>
       </div>
       <div className="stale-actions">
-        <button className="action-btn" onClick={onStash}>
+        <button className="tab-cleanup-btn" onClick={onStash}>
           Stash them
         </button>
-        <button className="tab-cleanup-btn" onClick={onClose}>
+        <button className="action-btn" onClick={onClose}>
           Close them
         </button>
         <button className="banner-dismiss" title="Dismiss" aria-label="Dismiss" onClick={onDismiss}>

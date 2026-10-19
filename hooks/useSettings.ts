@@ -25,9 +25,12 @@ export function useSettings(): UseSettings {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const initial = setTimeout(refresh, 0);
     const unsub = onSettingsChanged(refresh);
-    return unsub;
+    return () => {
+      clearTimeout(initial);
+      unsub();
+    };
   }, [refresh]);
 
   // Apply the theme to the page whenever it changes.

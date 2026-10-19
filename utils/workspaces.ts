@@ -53,13 +53,6 @@ export async function deleteWorkspace(id: string): Promise<void> {
   await mutateSynced<Workspace>(WS_KEY, (list) => list.filter((w) => w.id !== id));
 }
 
-/** Replace a workspace's captured tabs (used when switching away from it). */
-export async function setWorkspaceTabs(id: string, tabs: StashedTab[]): Promise<void> {
-  await mutateSynced<Workspace>(WS_KEY, (list) =>
-    list.map((w) => (w.id === id ? { ...w, tabs } : w)),
-  );
-}
-
 export async function getActiveWorkspaceId(): Promise<string | null> {
   try {
     const res = (await browser.storage.local.get(ACTIVE_KEY)) as { activeWorkspace?: string };
@@ -90,14 +83,29 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     const win = await browser.windows.getCurrent();
     const winId = win?.id;
     const live = await browser.tabs.query(winId !== undefined ? { windowId: winId } : {});
-    const real = live.filter((t) => t.url && !isInternalUrl(t.url));
+    const real = live.filter((t) => t.url && !isInternalUrl(t.url) && !t.incognito);
     const captured: StashedTab[] = real.map((t) => ({
       url: t.url as string,
       title: t.title || (t.url as string),
     }));
 
     // Save the current window into the active workspace BEFORE closing anything.
-    if (activeId) await setWorkspaceTabs(activeId, captured);
+    // The active id can be stale (workspace deleted on another device/page) or null;
+    // a plain map-update would silently drop the capture and the tabs would still be
+    // closed below — permanent loss. Fall back to a recovery workspace instead.
+    if (captured.length > 0) {
+      await mutateSynced<Workspace>(WS_KEY, (cur) => {
+        if (activeId && cur.some((w) => w.id === activeId)) {
+          return cur.map((w) => (w.id === activeId ? { ...w, tabs: captured } : w));
+        }
+        const recovered: Workspace = {
+          id: uid(),
+          name: `Recovered · ${new Date().toLocaleDateString()}`,
+          tabs: captured,
+        };
+        return [...cur, recovered];
+      });
+    }
 
     const ids = real.map((t) => t.id).filter((id): id is number => id !== undefined);
     if (ids.length > 0) await browser.tabs.remove(ids);

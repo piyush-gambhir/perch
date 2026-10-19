@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette, type PaletteItem } from '../../components/CommandPalette';
+import { ControlCenter } from '../../components/ControlCenter';
 import { DomainCard } from '../../components/DomainCard';
 import { DupeBanner } from '../../components/DupeBanner';
 import { FirstRunTour } from '../../components/FirstRunTour';
@@ -10,6 +11,7 @@ import {
   CloseIcon,
   GearIcon,
   MoonIcon,
+  PerchMark,
   SearchIcon,
   StashIcon,
   UndoIcon,
@@ -35,8 +37,20 @@ import {
   renameWorkspace,
   switchWorkspace,
 } from '../../utils/workspaces';
-import { deleteRoutine, openRoutine, renameRoutine, saveRoutine } from '../../utils/routines';
-import { displayTitle, friendlyDomain, getDateDisplay, getGreeting } from '../../utils/format';
+import {
+  deleteRoutine,
+  openRoutine,
+  renameRoutine,
+  saveRoutine,
+  setRoutineSchedule,
+} from '../../utils/routines';
+import {
+  displayTitle,
+  friendlyDomain,
+  getDateDisplay,
+  getGreeting,
+  hostOf,
+} from '../../utils/format';
 import type { DragTab } from '../../utils/dnd';
 import {
   addTabsToSession,
@@ -48,6 +62,7 @@ import {
   saveSession,
   toStashedTabs,
   undoLastClose,
+  updateSessionMeta,
 } from '../../utils/sessions';
 import { staleTabs } from '../../utils/stale';
 import {
@@ -66,6 +81,7 @@ import {
 } from '../../utils/tabs';
 import type { DomainGroup, TabInfo } from '../../utils/types';
 import { LANDING_PAGES_KEY } from '../../utils/types';
+import { captureSnapshot } from '../../utils/snapshots';
 
 function EmptyState() {
   return (
@@ -79,18 +95,23 @@ function EmptyState() {
   );
 }
 
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return '';
-  }
-}
-
 const IS_MAC =
   typeof navigator !== 'undefined' &&
   /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
 const SEARCH_HINT = IS_MAC ? '⌘K' : 'Ctrl K';
+
+/** When this new-tab page was opened — a stable "now" for pure-render staleness math. */
+const PAGE_OPENED_AT = Date.now();
+
+const STALE_SNOOZE_KEY = 'staleSnoozedUntil';
+const DUPE_SNOOZE_KEY = 'dupeSnoozedUntil';
+
+/** Epoch ms for the end of today — a dismissed banner stays hidden until then. */
+function endOfToday(): number {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
 
 function formatFreed(n: number): string {
   const mb = n * APPROX_MB_PER_TAB;
@@ -108,30 +129,68 @@ function Dashboard() {
   const firstRun = useFirstRun();
   const showToast = useToast();
 
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(
+    () => !!new URLSearchParams(location.search).get('q'),
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [controlOpen, setControlOpen] = useState(false);
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [dupeDismissed, setDupeDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const switchingRef = useRef(false);
 
+  // Dismissing a banner snoozes it until end of day, persisted so a fresh new-tab
+  // page doesn't resurrect a banner the user already waved off today.
+  useEffect(() => {
+    browser.storage.local
+      .get([STALE_SNOOZE_KEY, DUPE_SNOOZE_KEY])
+      .then((res) => {
+        const now = Date.now();
+        if (typeof res[STALE_SNOOZE_KEY] === 'number' && res[STALE_SNOOZE_KEY] > now)
+          setStaleDismissed(true);
+        if (typeof res[DUPE_SNOOZE_KEY] === 'number' && res[DUPE_SNOOZE_KEY] > now)
+          setDupeDismissed(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  const snoozeStale = () => {
+    setStaleDismissed(true);
+    browser.storage.local.set({ [STALE_SNOOZE_KEY]: endOfToday() }).catch(() => {});
+  };
+
+  const snoozeDupe = () => {
+    setDupeDismissed(true);
+    browser.storage.local.set({ [DUPE_SNOOZE_KEY]: endOfToday() }).catch(() => {});
+  };
+
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
   const stale = useMemo(
-    () => staleTabs(realTabs, Date.now(), settings.staleDays),
+    // PAGE_OPENED_AT keeps render pure; against a multi-day staleness threshold,
+    // being minutes out of date is invisible, and tab events refresh realTabs anyway.
+    () => staleTabs(realTabs, PAGE_OPENED_AT, settings.staleDays),
     [realTabs, settings.staleDays],
   );
   const canSuspend = useMemo(() => discardableCount(realTabs), [realTabs]);
+  const duplicateExtras = useMemo(() => {
+    const counts = new Map<string, number>();
+    realTabs.forEach((tab) => counts.set(tab.url, (counts.get(tab.url) ?? 0) + 1));
+    return [...counts.values()].reduce((total, count) => total + Math.max(0, count - 1), 0);
+  }, [realTabs]);
+  const largestGroup = groups[0];
 
   const openPalette = () => {
     void refreshHistory();
     setPaletteOpen(true);
   };
 
-  // Keyboard: Cmd/Ctrl+K or "/" opens the command palette.
+  // Keyboard: Cmd/Ctrl+K or "/" opens the command palette. Suppressed while the
+  // welcome tour or settings modal is up — it would open underneath them.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (firstRun.show || settingsOpen || controlOpen) return;
       const typing =
         e.target instanceof HTMLElement &&
         (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
@@ -149,7 +208,7 @@ function Dashboard() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paletteOpen, refreshHistory]);
+  }, [paletteOpen, refreshHistory, firstRun.show, settingsOpen, controlOpen]);
 
   const groupLabel = (g: DomainGroup) =>
     g.domain === LANDING_PAGES_KEY ? 'Homepages' : g.label || friendlyDomain(g.domain);
@@ -173,9 +232,11 @@ function Dashboard() {
   };
 
   const handleCloseGroup = async (group: DomainGroup) => {
+    // Record the undo entry BEFORE closing: if closing fails halfway, the tabs that
+    // did close are still recoverable (mirrors the stash-then-close ordering).
     const stashed = toStashedTabs(group.tabs);
-    await closeTabsByIds(idsOf(group.tabs));
     await pushClosed(groupLabel(group), stashed);
+    await closeTabsByIds(idsOf(group.tabs));
     showToast(`Closed ${group.tabs.length} tab${group.tabs.length !== 1 ? 's' : ''}`, () =>
       handleUndo(),
     );
@@ -199,18 +260,21 @@ function Dashboard() {
   };
 
   const handleCloseAll = async () => {
-    const stashed = toStashedTabs(realTabs);
-    await closeTabsByIds(idsOf(realTabs));
+    // Pinned tabs are deliberately kept — "fresh start" shouldn't take them down.
+    const closable = realTabs.filter((t) => !t.pinned);
+    const stashed = toStashedTabs(closable);
     await pushClosed(`${stashed.length} tabs`, stashed);
+    await closeTabsByIds(idsOf(closable));
     showToast('All tabs closed. Fresh start.', () => handleUndo());
     await refresh();
   };
 
   const handleStashAll = async () => {
-    const tabs = toStashedTabs(realTabs);
+    const closable = realTabs.filter((t) => !t.pinned);
+    const tabs = toStashedTabs(closable);
     if (tabs.length === 0) return;
     await saveSession('All tabs', tabs);
-    await closeTabsByIds(idsOf(realTabs));
+    await closeTabsByIds(idsOf(closable));
     showToast(`Stashed ${tabs.length} tabs`);
     await refresh();
   };
@@ -232,6 +296,16 @@ function Dashboard() {
   };
 
   const handleRestoreSession = async (id: string) => {
+    const session = sessions.find((item) => item.id === id);
+    if (session) {
+      const domains = [...new Set(session.tabs.map((tab) => hostOf(tab.url)).filter(Boolean))];
+      if (
+        !window.confirm(
+          `Restore ${session.tabs.length} tabs from ${session.name}?\n\n${domains.slice(0, 6).join(', ')}${domains.length > 6 ? '…' : ''}\n\nTabs already open will be skipped.`,
+        )
+      )
+        return;
+    }
     await restoreSession(id, { remove: true });
     showToast('Stash restored');
     await refresh();
@@ -289,8 +363,17 @@ function Dashboard() {
 
   const handleSwitchWorkspace = async (targetId: string) => {
     if (switchingRef.current || targetId === activeWorkspaceId) return;
+    const target = workspaces.find((workspace) => workspace.id === targetId);
+    if (
+      target &&
+      !window.confirm(
+        `Switch to ${target.name}?\n\n${target.tabs.length} saved tabs will open. Your current window will be captured first, and a recovery snapshot will be kept.`,
+      )
+    )
+      return;
     switchingRef.current = true;
     try {
+      await captureSnapshot('before-switch', true);
       const name = await switchWorkspace(targetId);
       if (name) {
         showToast(`Switched to ${name}`);
@@ -327,8 +410,8 @@ function Dashboard() {
 
   const handleCloseStale = async (tabs: TabInfo[]) => {
     const stashed = toStashedTabs(tabs);
-    await closeTabsByIds(idsOf(tabs));
     await pushClosed('Stale tabs', stashed);
+    await closeTabsByIds(idsOf(tabs));
     setStaleDismissed(true);
     showToast(`Closed ${stashed.length} stale tab${stashed.length !== 1 ? 's' : ''}`, () =>
       handleUndo(),
@@ -395,6 +478,8 @@ function Dashboard() {
           subtitle: hostname || t.url,
           kind: 'tab',
           hostname,
+          favIconUrl: t.favIconUrl,
+          timestamp: t.lastAccessed,
           run: () => focusTab(t.url),
         };
       });
@@ -404,6 +489,8 @@ function Dashboard() {
         id: `saved-${d.id}`,
         title: d.title || d.url,
         subtitle: hostname,
+        searchText: [...(d.tags ?? []), d.note ?? ''].join(' '),
+        timestamp: Date.parse(d.savedAt),
         kind: 'saved',
         hostname,
         run: () => openUrl(d.url),
@@ -414,7 +501,21 @@ function Dashboard() {
       title: s.name,
       subtitle: `${s.tabs.length} tab${s.tabs.length !== 1 ? 's' : ''}`,
       kind: 'session',
+      searchText: [...(s.tags ?? []), s.note ?? '', ...s.tabs.map((tab) => tab.url)].join(' '),
+      timestamp: Date.parse(s.createdAt),
       run: () => handleRestoreSession(s.id),
+    }));
+    const workspaceItems: PaletteItem[] = workspaces.map((workspace) => ({
+      id: `ws-${workspace.id}`,
+      title: workspace.name,
+      subtitle: `${workspace.tabs.length} saved tabs`,
+      kind: 'workspace',
+      searchText: [
+        ...(workspace.tags ?? []),
+        workspace.note ?? '',
+        ...workspace.tabs.map((tab) => tab.url),
+      ].join(' '),
+      run: () => handleSwitchWorkspace(workspace.id),
     }));
     // Durable recall: pages Perch has held that aren't already shown above.
     const liveUrls = new Set<string>([
@@ -431,23 +532,69 @@ function Dashboard() {
           subtitle: hostname,
           kind: 'history',
           hostname,
+          timestamp: h.ts,
           run: () => openUrl(h.url),
         };
       });
     // Verb actions — run a command straight from the palette.
     const actionItems: PaletteItem[] = [
-      { id: 'act-stash-all', title: 'Stash all tabs', subtitle: 'Command', kind: 'action', run: handleStashAll },
-      { id: 'act-close-all', title: 'Close all tabs', subtitle: 'Command', kind: 'action', run: handleCloseAll },
-      { id: 'act-suspend', title: 'Suspend inactive tabs', subtitle: 'Command', kind: 'action', run: handleSuspend },
-      { id: 'act-new-ws', title: 'New workspace', subtitle: 'Command', kind: 'action', run: handleCreateWorkspace },
-      { id: 'act-settings', title: 'Open settings', subtitle: 'Command', kind: 'action', run: () => setSettingsOpen(true) },
+      {
+        id: 'act-stash-all',
+        title: 'Stash all tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleStashAll,
+      },
+      {
+        id: 'act-close-all',
+        title: 'Close all tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleCloseAll,
+      },
+      {
+        id: 'act-suspend',
+        title: 'Suspend inactive tabs',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleSuspend,
+      },
+      {
+        id: 'act-new-ws',
+        title: 'New workspace',
+        subtitle: 'Command',
+        kind: 'action',
+        run: handleCreateWorkspace,
+      },
+      {
+        id: 'act-settings',
+        title: 'Open settings',
+        subtitle: 'Command',
+        kind: 'action',
+        run: () => setSettingsOpen(true),
+      },
       ...(recentlyClosed.length > 0
-        ? [{ id: 'act-undo', title: 'Undo last close', subtitle: 'Command', kind: 'action' as const, run: handleUndo }]
+        ? [
+            {
+              id: 'act-undo',
+              title: 'Undo last close',
+              subtitle: 'Command',
+              kind: 'action' as const,
+              run: handleUndo,
+            },
+          ]
         : []),
     ];
-    return [...tabItems, ...savedItems, ...sessionItems, ...actionItems, ...historyItems];
+    return [
+      ...tabItems,
+      ...savedItems,
+      ...sessionItems,
+      ...workspaceItems,
+      ...actionItems,
+      ...historyItems,
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realTabs, deferred.active, sessions, history, recentlyClosed.length]);
+  }, [realTabs, deferred.active, sessions, workspaces, history, recentlyClosed.length]);
 
   const toggleSelect = (id: number) =>
     setSelected((prev) => {
@@ -508,8 +655,8 @@ function Dashboard() {
   const handleBulkClose = async () => {
     const stashed = toStashedTabs(selectedTabInfos());
     if (stashed.length === 0) return;
-    await closeTabsByIds(expandedSelectedIds());
     await pushClosed(`${stashed.length} tabs`, stashed);
+    await closeTabsByIds(expandedSelectedIds());
     clearSelection();
     showToast(`Closed ${stashed.length} tab${stashed.length !== 1 ? 's' : ''}`, () => handleUndo());
     await refresh();
@@ -519,6 +666,10 @@ function Dashboard() {
     <div className="container">
       <header>
         <div className="header-left">
+          <div className="wordmark" aria-label="Perch">
+            <PerchMark className="wordmark-icon" />
+            <span>Perch</span>
+          </div>
           <h1 id="greeting">{greeting}</h1>
           <div className="date">{dateDisplay}</div>
         </div>
@@ -555,6 +706,14 @@ function Dashboard() {
             </button>
           )}
           <button
+            className="tool-btn"
+            onClick={() => setControlOpen(true)}
+            aria-label="Open recovery, health, and automation"
+            title="Recovery, health, and automation"
+          >
+            Control
+          </button>
+          <button
             className="tool-btn icon-only"
             onClick={() => setSettingsOpen(true)}
             aria-label="Settings"
@@ -576,12 +735,66 @@ function Dashboard() {
         />
       )}
 
+      {realTabs.length > 0 && (
+        <section className="overview-card" aria-label="Tab overview">
+          <div className="overview-copy">
+            <span className="overview-eyebrow">Right now</span>
+            <strong>
+              {canSuspend > 0
+                ? `${canSuspend} tab${canSuspend !== 1 ? 's are' : ' is'} ready to sleep`
+                : stale.length > 0
+                  ? `${stale.length} old tab${stale.length !== 1 ? 's need' : ' needs'} a decision`
+                  : 'Your tabs are in good shape'}
+            </strong>
+            <span>
+              {canSuspend > 0
+                ? `Suspend them without closing anything and free about ${formatFreed(canSuspend)}.`
+                : stale.length > 0
+                  ? `These tabs have not been opened in at least ${settings.staleDays} days.`
+                  : `${realTabs.length} tabs are organized across ${groups.length} groups.`}
+            </span>
+          </div>
+          <div className="overview-metrics" aria-label="Current tab metrics">
+            <div>
+              <strong>{realTabs.length}</strong>
+              <span>tabs</span>
+            </div>
+            <div>
+              <strong>{groups.length}</strong>
+              <span>spaces</span>
+            </div>
+            <div className={duplicateExtras > 0 ? 'has-attention' : ''}>
+              <strong>{duplicateExtras}</strong>
+              <span>duplicates</span>
+            </div>
+            <div className={stale.length > 0 ? 'has-attention' : ''}>
+              <strong>{stale.length}</strong>
+              <span>stale</span>
+            </div>
+          </div>
+          <div className="overview-actions">
+            {canSuspend > 0 ? (
+              <button className="overview-primary" onClick={handleSuspend}>
+                <MoonIcon /> Suspend {canSuspend}
+              </button>
+            ) : stale.length > 0 ? (
+              <button className="overview-primary" onClick={() => handleStashStale(stale)}>
+                <StashIcon /> Stash stale
+              </button>
+            ) : largestGroup ? (
+              <button className="overview-primary" onClick={() => handleFocusGroup(largestGroup)}>
+                Focus {groupLabel(largestGroup)}
+              </button>
+            ) : null}
+            <button className="overview-secondary" onClick={handleCreateRoutine}>
+              Save today as a routine
+            </button>
+          </div>
+        </section>
+      )}
+
       {tabOutCount > 1 && !dupeDismissed && (
-        <DupeBanner
-          count={tabOutCount}
-          onClose={handleTabOutDupes}
-          onDismiss={() => setDupeDismissed(true)}
-        />
+        <DupeBanner count={tabOutCount} onClose={handleTabOutDupes} onDismiss={snoozeDupe} />
       )}
       {stale.length > 0 && !staleDismissed && (
         <StaleBanner
@@ -589,7 +802,7 @@ function Dashboard() {
           days={settings.staleDays}
           onStash={() => handleStashStale(stale)}
           onClose={() => handleCloseStale(stale)}
-          onDismiss={() => setStaleDismissed(true)}
+          onDismiss={snoozeStale}
         />
       )}
 
@@ -656,32 +869,54 @@ function Dashboard() {
         </div>
 
         <aside className="sidebar">
-          <Sessions
-            sessions={sessions}
-            onRestore={handleRestoreSession}
-            onRestoreNewWindow={handleRestoreNewWindow}
-            onRename={handleRenameSession}
-            onDelete={handleDeleteSession}
-            onReorder={handleReorderSession}
-            onDropToSession={handleDropToSession}
-            onCreateStashFromDrop={handleCreateStashFromDrop}
-          />
-          <Routines
-            routines={routines}
-            canCreate={realTabs.length > 0}
-            onCreate={handleCreateRoutine}
-            onOpen={handleOpenRoutine}
-            onOpenNewWindow={handleOpenRoutineNewWindow}
-            onRename={handleRenameRoutine}
-            onDelete={handleDeleteRoutine}
-          />
-          <SavedForLater
-            active={deferred.active}
-            archived={deferred.archived}
-            onCheck={deferred.checkOff}
-            onDismiss={deferred.dismiss}
-            onDropSave={handleDropSave}
-          />
+          {sessions.length > 0 && (
+            <Sessions
+              sessions={sessions}
+              onRestore={handleRestoreSession}
+              onRestoreNewWindow={handleRestoreNewWindow}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+              onMeta={(id, tags, note) => updateSessionMeta(id, { tags, note })}
+              onReorder={handleReorderSession}
+              onDropToSession={handleDropToSession}
+              onCreateStashFromDrop={handleCreateStashFromDrop}
+            />
+          )}
+          {routines.length > 0 && (
+            <Routines
+              routines={routines}
+              canCreate={realTabs.length > 0}
+              onCreate={handleCreateRoutine}
+              onOpen={handleOpenRoutine}
+              onOpenNewWindow={handleOpenRoutineNewWindow}
+              onRename={handleRenameRoutine}
+              onSchedule={setRoutineSchedule}
+              onDelete={handleDeleteRoutine}
+            />
+          )}
+          {(deferred.active.length > 0 || deferred.archived.length > 0) && (
+            <SavedForLater
+              active={deferred.active}
+              archived={deferred.archived}
+              onCheck={deferred.checkOff}
+              onDismiss={deferred.dismiss}
+              onMeta={deferred.updateMeta}
+              onDropSave={handleDropSave}
+            />
+          )}
+          {sessions.length === 0 &&
+            routines.length === 0 &&
+            deferred.active.length === 0 &&
+            deferred.archived.length === 0 && (
+              <div className="shelf-empty">
+                <span className="overview-eyebrow">Your shelf</span>
+                <strong>Keep something worth returning to.</strong>
+                <p>Stash a group, save a tab, or capture today as a reusable routine.</p>
+                <button className="overview-secondary" onClick={handleCreateRoutine}>
+                  Save current tabs
+                </button>
+              </div>
+            )}
         </aside>
       </div>
 
@@ -719,6 +954,12 @@ function Dashboard() {
         settings={settings}
         onChange={updateSettings}
         onClose={() => setSettingsOpen(false)}
+      />
+      <ControlCenter
+        open={controlOpen}
+        tabs={realTabs}
+        onClose={() => setControlOpen(false)}
+        onRefresh={refresh}
       />
       {firstRun.show && <FirstRunTour onDismiss={firstRun.dismiss} />}
     </div>

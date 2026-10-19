@@ -20,14 +20,47 @@
 import { browser } from 'wxt/browser';
 import { withLock } from './locks';
 
-const CHUNK_SIZE = 6000;
-const MAX_CHUNKS = 80;
+// storage.sync's QUOTA_BYTES_PER_ITEM (8192) is measured on the JSON stringification
+// of the value in UTF-8 bytes — so a chunk's quotes/backslashes count double and CJK
+// chars count 3+. Budget well under 8192 to leave room for the key name and the
+// stringification's surrounding quotes.
+const CHUNK_BYTES = 7000;
+// 100 KB total sync quota shared across all keys; bail out early past ~84 KB.
+const MAX_CHUNKS = 12;
 
-/** Split a string into <=size pieces. Pure. */
-export function chunkString(s: string, size: number = CHUNK_SIZE): string[] {
+/** JSON-escaped UTF-8 byte length of one code point inside a JSON string. */
+function escapedByteLength(code: number): number {
+  if (code === 0x22 || code === 0x5c) return 2; // " or \ → \" or \\
+  if (code < 0x20) return 6; // control chars → \uXXXX (worst case)
+  if (code <= 0x7f) return 1;
+  if (code <= 0x7ff) return 2;
+  if (code <= 0xffff) return 3;
+  return 4;
+}
+
+/**
+ * Split a string into pieces of at most `maxBytes` JSON-escaped UTF-8 bytes each,
+ * never splitting a surrogate pair. Pure.
+ */
+export function chunkString(s: string, maxBytes: number = CHUNK_BYTES): string[] {
   if (s.length === 0) return [];
   const out: string[] = [];
-  for (let i = 0; i < s.length; i += size) out.push(s.slice(i, i + size));
+  let start = 0;
+  let bytes = 0;
+  let i = 0;
+  while (i < s.length) {
+    const code = s.codePointAt(i) as number;
+    const width = code > 0xffff ? 2 : 1;
+    const len = escapedByteLength(code);
+    if (bytes + len > maxBytes && i > start) {
+      out.push(s.slice(start, i));
+      start = i;
+      bytes = 0;
+    }
+    bytes += len;
+    i += width;
+  }
+  out.push(s.slice(start));
   return out;
 }
 
@@ -97,20 +130,47 @@ async function readLocal<T>(key: string): Promise<{ items: T[] | null; rev: numb
   }
 }
 
+/**
+ * Read both copies and pick a winner by rev. When the sync copy is strictly newer,
+ * persist it back into local: otherwise a device that later goes offline falls back
+ * to its stale local copy, and the next mutation re-uploads that stale list —
+ * permanently deleting whatever the other device had synced.
+ */
+async function loadNewest<T>(key: string): Promise<{ items: T[]; rev: number }> {
+  const [local, sync] = await Promise.all([readLocal<T>(key), readSync<T>(key)]);
+  if (sync && (local.items === null || sync.rev >= local.rev)) {
+    if (sync.rev > local.rev) {
+      await browser.storage.local
+        .set({ [key]: sync.items, [revKey(key)]: sync.rev })
+        .catch(() => {});
+    }
+    return { items: sync.items, rev: sync.rev };
+  }
+  if (local.items !== null) return { items: local.items, rev: local.rev };
+  return { items: [], rev: 0 };
+}
+
 /** Load a list, returning whichever of {local, sync} is newer (by rev). */
 export async function loadSynced<T>(key: string): Promise<T[]> {
-  const [local, sync] = await Promise.all([readLocal<T>(key), readSync<T>(key)]);
-  if (sync && (local.items === null || sync.rev >= local.rev)) return sync.items;
-  if (local.items !== null) return local.items;
-  if (sync) return sync.items;
-  return [];
+  // Locked so the local write-back can't race a concurrent mutateSynced write.
+  return withLock(`perch-store:${key}`, async () => (await loadNewest<T>(key)).items);
 }
 
 /** Save a list: stamp a new rev, write local (source of truth), then mirror to sync. */
-export async function saveSynced<T>(key: string, items: T[]): Promise<void> {
-  const rev = Date.now();
+async function saveWithRev<T>(key: string, items: T[], baseRev: number): Promise<void> {
+  // Monotonic past the base rev, so a device with a slow wall clock can't produce
+  // a write that an older copy immediately shadows.
+  const rev = Math.max(Date.now(), baseRev + 1);
   await browser.storage.local.set({ [key]: items, [revKey(key)]: rev });
   await writeSync(key, items, rev);
+}
+
+/** Save a list (standalone). Prefer mutateSynced for read-modify-write. */
+export async function saveSynced<T>(key: string, items: T[]): Promise<void> {
+  return withLock(`perch-store:${key}`, async () => {
+    const { rev } = await loadNewest<T>(key);
+    await saveWithRev(key, items, rev);
+  });
 }
 
 /**
@@ -120,28 +180,32 @@ export async function saveSynced<T>(key: string, items: T[]): Promise<void> {
  */
 export async function mutateSynced<T>(key: string, transform: (items: T[]) => T[]): Promise<T[]> {
   return withLock(`perch-store:${key}`, async () => {
-    const items = await loadSynced<T>(key);
+    const { items, rev } = await loadNewest<T>(key);
     const next = transform(items);
-    await saveSynced(key, next);
+    await saveWithRev(key, next, rev);
     return next;
   });
 }
 
 /** Subscribe to changes for this key in either storage area. Returns unsubscribe. */
 export function onSyncedChanged(key: string, cb: () => void): () => void {
-  let queued = false;
+  // A save writes local then sync, arriving as two separate change events; coalesce
+  // them into one callback so subscribers don't refetch and re-render twice.
+  let timer: ReturnType<typeof setTimeout> | null = null;
   const fire = () => {
-    if (queued) return;
-    queued = true;
-    queueMicrotask(() => {
-      queued = false;
+    if (timer) return;
+    timer = setTimeout(() => {
+      timer = null;
       cb();
-    });
+    }, 25);
   };
   const listener = (changes: Record<string, unknown>, area: string) => {
     if (area === 'local' && key in changes) fire();
     else if (area === 'sync' && metaKey(key) in changes) fire();
   };
   browser.storage.onChanged.addListener(listener);
-  return () => browser.storage.onChanged.removeListener(listener);
+  return () => {
+    browser.storage.onChanged.removeListener(listener);
+    if (timer) clearTimeout(timer);
+  };
 }
