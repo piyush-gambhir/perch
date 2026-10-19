@@ -223,10 +223,14 @@ export default defineBackground(() => {
       });
     }
     if (alarm.name === SNAPSHOT_ALARM) {
-      void captureSnapshot('automatic').then(async () => {
-        await runAutomationRules();
-        await runScheduledRoutines();
-      });
+      // Three independent jobs, each best-effort with its own catch, so a failed
+      // snapshot (e.g. a storage quota error) skips neither rules nor routines. They
+      // run in order so the snapshot sees the tabs before any rule closes them.
+      void (async () => {
+        await captureSnapshot('automatic').catch(() => {});
+        await runAutomationRules().catch(() => {});
+        await runScheduledRoutines().catch(() => {});
+      })();
     }
     if (alarm.name === LOCAL_RELOAD_ALARM) void checkLocalBuild();
   });
