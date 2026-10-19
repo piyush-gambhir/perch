@@ -90,14 +90,17 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     }));
 
     // Save the current window into the active workspace BEFORE closing anything.
-    // The active id can be stale (workspace deleted on another device/page) or null;
-    // a plain map-update would silently drop the capture and the tabs would still be
-    // closed below — permanent loss. Fall back to a recovery workspace instead.
-    if (captured.length > 0) {
+    // An empty capture is saved too: keeping the old list would reopen tabs the user
+    // already closed the next time they switch back. The active id can be stale
+    // (workspace deleted on another device/page) or null; a plain map-update would
+    // silently drop the capture and the tabs would still be closed below, a permanent
+    // loss. Fall back to a recovery workspace instead, when there is anything to keep.
+    if (activeId || captured.length > 0) {
       await mutateSynced<Workspace>(WS_KEY, (cur) => {
         if (activeId && cur.some((w) => w.id === activeId)) {
           return cur.map((w) => (w.id === activeId ? { ...w, tabs: captured } : w));
         }
+        if (captured.length === 0) return cur;
         const recovered: Workspace = {
           id: uid(),
           name: `Recovered · ${new Date().toLocaleDateString()}`,
