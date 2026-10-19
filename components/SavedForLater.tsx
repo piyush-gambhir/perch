@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { getDragTab, type DragTab } from '../utils/dnd';
-import { faviconUrl, hostOf, safeHref, timeAgo } from '../utils/format';
+import { hostOf, safeHref, timeAgo } from '../utils/format';
+import { faviconFor } from '../utils/tabs';
 import type { DeferredTab } from '../utils/types';
 import { ChevronIcon, CloseIcon } from './icons';
 
@@ -68,6 +69,7 @@ export function SavedForLater({
         <div className="deferred-list">
           {active.map((item) => {
             const domain = hostOf(item.url);
+            const favicon = faviconFor(item.url);
             return (
               <div key={item.id} className="deferred-item">
                 <input
@@ -83,14 +85,16 @@ export function SavedForLater({
                     className="deferred-title"
                     title={item.title}
                   >
-                    <img
-                      src={faviconUrl(domain)}
-                      alt=""
-                      style={{ width: 14, height: 14, verticalAlign: -2, marginRight: 4 }}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
+                    {favicon && (
+                      <img
+                        src={favicon}
+                        alt=""
+                        style={{ width: 14, height: 14, verticalAlign: -2, marginRight: 4 }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
                     {item.title || item.url}
                   </a>
                   <div className="deferred-meta">
