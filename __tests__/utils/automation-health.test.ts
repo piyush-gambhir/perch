@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tabsMatchingRule } from '../../utils/automation';
+import { duplicateIdsToClose, tabsMatchingRule } from '../../utils/automation';
 import { analyzeTabHealth, canonicalUrl } from '../../utils/health';
 import type { AutomationRule, TabInfo } from '../../utils/types';
 
@@ -42,6 +42,51 @@ describe('tabsMatchingRule', () => {
     expect(tabsMatchingRule({ ...rule, enabled: false }, [tab('https://github.com')], NOW)).toEqual(
       [],
     );
+  });
+});
+
+describe('duplicateIdsToClose', () => {
+  const url = 'https://github.com/openai';
+  const rule: AutomationRule = {
+    id: 'r2',
+    name: 'Old duplicates',
+    enabled: true,
+    hostname: 'github.com',
+    olderThanDays: 7,
+    action: 'close-duplicates',
+    excludePinned: true,
+  };
+
+  it('closes only the copies the age limit matched', () => {
+    const tabs = [
+      tab(url, { id: 1, lastAccessed: NOW - 10 * DAY }),
+      tab(url, { id: 2, lastAccessed: NOW - DAY }),
+      tab(url, { id: 3, active: true, lastAccessed: NOW }),
+    ];
+    const matches = tabsMatchingRule(rule, tabs, NOW);
+    expect(duplicateIdsToClose(matches, tabs)).toEqual([1]);
+  });
+
+  it('keeps one copy when every copy matched, preferring the active one', () => {
+    const tabs = [
+      tab(url, { id: 1, lastAccessed: NOW - 10 * DAY }),
+      tab(url, { id: 2, active: true, lastAccessed: NOW - 9 * DAY }),
+      tab(url, { id: 3, lastAccessed: NOW - 8 * DAY }),
+    ];
+    const matches = tabsMatchingRule(rule, tabs, NOW);
+    expect(duplicateIdsToClose(matches, tabs)).toEqual([1, 3]);
+  });
+
+  it('leaves a single matched copy and pinned copies alone', () => {
+    const single = [tab(url, { id: 1, lastAccessed: NOW - 10 * DAY })];
+    expect(duplicateIdsToClose(single, single)).toEqual([]);
+
+    const pinned = [
+      tab(url, { id: 1, pinned: true, lastAccessed: NOW - 10 * DAY }),
+      tab(url, { id: 2, lastAccessed: NOW - 10 * DAY }),
+    ];
+    const matches = tabsMatchingRule({ ...rule, excludePinned: false }, pinned, NOW);
+    expect(duplicateIdsToClose(matches, pinned)).toEqual([2]);
   });
 });
 

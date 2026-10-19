@@ -51,6 +51,29 @@ export function tabsMatchingRule(
   });
 }
 
+/**
+ * Tab ids a close-duplicates rule may close. Only rule-matched tabs are candidates;
+ * other open copies of the same URL only prove that one survives. When every copy
+ * matched, one is kept (pinned, then active, then the first). Pinned tabs are never
+ * closed, as in closeDuplicateTabs.
+ */
+export function duplicateIdsToClose(matches: TabInfo[], tabs: TabInfo[]): number[] {
+  const matched = new Set(matches.map((tab) => tab.id));
+  const ids: number[] = [];
+  for (const url of new Set(matches.map((tab) => tab.url))) {
+    const copies = tabs.filter((tab) => tab.url === url && tab.id !== undefined);
+    if (copies.length < 2) continue;
+    const survivorOutsideRule = copies.some((tab) => !matched.has(tab.id));
+    const keep = survivorOutsideRule
+      ? undefined
+      : copies.find((tab) => tab.pinned) || copies.find((tab) => tab.active) || copies[0];
+    for (const tab of copies) {
+      if (matched.has(tab.id) && tab !== keep && !tab.pinned) ids.push(tab.id as number);
+    }
+  }
+  return ids;
+}
+
 export function onAutomationRulesChanged(callback: () => void): () => void {
   return onSyncedChanged(KEY, callback);
 }
