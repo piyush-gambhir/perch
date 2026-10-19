@@ -10,18 +10,77 @@ import { saveTabForLater } from '../utils/storage';
 import { appendOrCreateSession, saveSession, toStashedTabs } from '../utils/sessions';
 import { getSettings } from '../utils/settings';
 import { staleTabs } from '../utils/stale';
-import { closeTabsByIds, countRealTabs, fetchOpenTabs, isInternalUrl } from '../utils/tabs';
+import {
+  closeDuplicateTabs,
+  closeTabsByIds,
+  countRealTabs,
+  fetchOpenTabs,
+  focusTab,
+  isInternalUrl,
+  openUrl,
+  suspendTabsExcept,
+} from '../utils/tabs';
+import { captureSnapshot } from '../utils/snapshots';
+import { getAutomationRules, tabsMatchingRule } from '../utils/automation';
+import { getWorkspaces, switchWorkspace } from '../utils/workspaces';
+import { getRoutines, openRoutine } from '../utils/routines';
 
 const AUTO_STASH_ALARM = 'perch-auto-stash';
+const SNAPSHOT_ALARM = 'perch-snapshot';
+const LOCAL_RELOAD_ALARM = 'perch-local-reload';
 const CTX_STASH = 'perch-ctx-stash';
 const CTX_SAVE = 'perch-ctx-save';
 
 let badgeTimer: ReturnType<typeof setTimeout> | null = null;
+let localBuildId: string | null = null;
+
+/**
+ * Unpacked local builds contain a marker that store builds do not. Polling it lets
+ * Chrome reload the extension after `pnpm build:local` replaces the shelf folder.
+ */
+async function checkLocalBuild(): Promise<void> {
+  try {
+    const localMarkerUrl = (browser.runtime.getURL as (path: string) => string)(
+      '/local-build.json',
+    );
+    const response = await fetch(localMarkerUrl, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return;
+    const marker = (await response.json()) as { builtAt?: string };
+    if (!marker.builtAt) return;
+    if (!localBuildId) {
+      localBuildId = marker.builtAt;
+      const alarm = await browser.alarms.get(LOCAL_RELOAD_ALARM);
+      if (!alarm) await browser.alarms.create(LOCAL_RELOAD_ALARM, { periodInMinutes: 0.5 });
+    } else if (localBuildId !== marker.builtAt) {
+      browser.runtime.reload();
+    }
+  } catch {
+    // Store builds have no marker; local auto-reload simply remains disabled.
+  }
+}
+
+function enableLocalBuildReload(): void {
+  void checkLocalBuild();
+  setInterval(checkLocalBuild, 2_000);
+}
+
+// Firefox builds as MV2, where the API is `browserAction`; `action` is MV3/Chrome.
+type BadgeApi = {
+  setBadgeText: (d: { text: string }) => Promise<void>;
+  setBadgeBackgroundColor: (d: { color: string }) => Promise<void>;
+};
+const badgeApi = (): BadgeApi | undefined =>
+  (browser as unknown as { action?: BadgeApi; browserAction?: BadgeApi }).action ??
+  (browser as unknown as { browserAction?: BadgeApi }).browserAction;
 
 async function updateBadge(): Promise<void> {
+  const action = badgeApi();
+  if (!action) return;
   try {
     const count = await countRealTabs();
-    await browser.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+    await action.setBadgeText({ text: count > 0 ? String(count) : '' });
     if (count === 0) return;
 
     let color: string;
@@ -29,9 +88,9 @@ async function updateBadge(): Promise<void> {
     else if (count <= 20) color = '#b8892e';
     else color = '#b35a5a';
 
-    await browser.action.setBadgeBackgroundColor({ color });
+    await action.setBadgeBackgroundColor({ color });
   } catch {
-    await browser.action.setBadgeText({ text: '' }).catch(() => {});
+    await action.setBadgeText({ text: '' }).catch(() => {});
   }
 }
 
@@ -55,11 +114,60 @@ async function runAutoStash(): Promise<void> {
   await closeTabsByIds(stale.map((t) => t.id));
 }
 
-/** Create the alarm only if it doesn't already exist, so we don't reset its schedule. */
-async function ensureAlarm(): Promise<void> {
+async function runAutomationRules(): Promise<void> {
+  const tabs = (await fetchOpenTabs()).filter((tab) => !tab.isPerchTab && !isInternalUrl(tab.url));
+  for (const rule of await getAutomationRules()) {
+    const matches = tabsMatchingRule(rule, tabs);
+    if (!matches.length) continue;
+    if (rule.action === 'stash') {
+      const stashed = toStashedTabs(matches);
+      await appendOrCreateSession(`Rule · ${rule.name}`, stashed);
+      await closeTabsByIds(matches.map((tab) => tab.id));
+    } else if (rule.action === 'close-duplicates') {
+      await closeDuplicateTabs(matches.map((tab) => tab.url));
+    } else if (rule.action === 'suspend') {
+      const keep = tabs.filter((tab) => !matches.includes(tab)).map((tab) => tab.id);
+      await suspendTabsExcept(keep);
+    }
+  }
+}
+
+async function runScheduledRoutines(): Promise<void> {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const state = (await browser.storage.local.get('routineScheduleRuns')) as {
+    routineScheduleRuns?: Record<string, string>;
+  };
+  const runs = state.routineScheduleRuns ?? {};
+  for (const routine of await getRoutines()) {
+    if (!routine.schedule || runs[routine.id] === today) continue;
+    const [hours, mins] = routine.schedule.split(':').map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(mins)) continue;
+    const target = hours * 60 + mins;
+    if (minutes < target || minutes - target >= 20) continue;
+    await openRoutine(routine.id);
+    runs[routine.id] = today;
+  }
+  await browser.storage.local.set({ routineScheduleRuns: runs });
+}
+
+/**
+ * Keep the alarm in step with the setting: registered while auto-stash is on
+ * (without resetting its schedule if it already exists), cleared while off — so a
+ * disabled feature doesn't wake the service worker every hour.
+ */
+async function syncAlarmToSettings(): Promise<void> {
   try {
-    const existing = await browser.alarms.get(AUTO_STASH_ALARM);
-    if (!existing) await browser.alarms.create(AUTO_STASH_ALARM, { periodInMinutes: 60 });
+    const settings = await getSettings();
+    if (settings.autoStash) {
+      const existing = await browser.alarms.get(AUTO_STASH_ALARM);
+      if (!existing) await browser.alarms.create(AUTO_STASH_ALARM, { periodInMinutes: 60 });
+    } else {
+      await browser.alarms.clear(AUTO_STASH_ALARM);
+    }
+    const snapshot = await browser.alarms.get(SNAPSHOT_ALARM);
+    if (!snapshot) await browser.alarms.create(SNAPSHOT_ALARM, { periodInMinutes: 15 });
   } catch {
     /* alarms unavailable */
   }
@@ -82,26 +190,83 @@ function setupContextMenus(): void {
 }
 
 export default defineBackground(() => {
+  enableLocalBuildReload();
   browser.runtime.onInstalled.addListener(() => {
     updateBadge();
-    setupContextMenus();
-    ensureAlarm();
+    setupContextMenus(); // menus persist in MV3 — (re)create only on install/update
+    void syncAlarmToSettings();
   });
   browser.runtime.onStartup.addListener(() => {
     updateBadge();
-    ensureAlarm();
+    void syncAlarmToSettings();
   });
 
   browser.tabs.onCreated.addListener(scheduleBadge);
   browser.tabs.onRemoved.addListener(scheduleBadge);
   browser.tabs.onUpdated.addListener(scheduleBadge);
 
+  // React to the auto-stash toggle immediately (settings live in sync, with a
+  // local fallback copy).
+  browser.storage.onChanged.addListener((changes, area) => {
+    if ((area === 'sync' || area === 'local') && 'settings' in changes) {
+      void syncAlarmToSettings();
+    }
+  });
+
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === AUTO_STASH_ALARM) runAutoStash();
+    if (alarm.name === AUTO_STASH_ALARM) {
+      runAutoStash().catch(() => {
+        /* best-effort; next hourly run retries */
+      });
+    }
+    if (alarm.name === SNAPSHOT_ALARM) {
+      void captureSnapshot('automatic').then(async () => {
+        await runAutomationRules();
+        await runScheduledRoutines();
+      });
+    }
+    if (alarm.name === LOCAL_RELOAD_ALARM) void checkLocalBuild();
+  });
+
+  const omnibox = (
+    browser as unknown as {
+      omnibox?: {
+        setDefaultSuggestion: (suggestion: { description: string }) => void;
+        onInputEntered: { addListener: (callback: (text: string) => void) => void };
+      };
+    }
+  ).omnibox;
+  omnibox?.setDefaultSuggestion({
+    description: 'Search Perch tabs, or use: stash, suspend, workspace &lt;name&gt;',
+  });
+  omnibox?.onInputEntered.addListener((raw) => {
+    void (async () => {
+      const query = raw.trim();
+      const lower = query.toLowerCase();
+      if (lower === 'stash') {
+        const tabs = (await fetchOpenTabs()).filter((tab) => !tab.isPerchTab && !tab.pinned);
+        await saveSession('Omnibox stash', toStashedTabs(tabs));
+        await closeTabsByIds(tabs.map((tab) => tab.id));
+      } else if (lower === 'suspend') {
+        await suspendTabsExcept([]);
+      } else if (lower.startsWith('workspace ')) {
+        const name = lower.slice(10).trim();
+        const workspace = (await getWorkspaces()).find((item) =>
+          item.name.toLowerCase().includes(name),
+        );
+        if (workspace) await switchWorkspace(workspace.id);
+      } else {
+        const tabs = await fetchOpenTabs();
+        const match = tabs.find((tab) => `${tab.title} ${tab.url}`.toLowerCase().includes(lower));
+        if (match) await focusTab(match.url);
+        else if (/^https?:\/\//i.test(query)) await openUrl(query);
+        else await openUrl(browser.runtime.getURL(`/newtab.html?q=${encodeURIComponent(query)}`));
+      }
+    })();
   });
 
   browser.contextMenus?.onClicked.addListener(async (info, tab) => {
-    if (!tab?.url || !tab.title) return;
+    if (!tab?.url || !tab.title || isInternalUrl(tab.url) || tab.incognito) return;
     const t = { url: tab.url, title: tab.title };
     if (info.menuItemId === CTX_SAVE) {
       await saveTabForLater(t);
@@ -111,6 +276,5 @@ export default defineBackground(() => {
     }
   });
 
-  setupContextMenus();
   updateBadge();
 });

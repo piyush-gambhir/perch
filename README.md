@@ -15,10 +15,16 @@ HMR, and cross-browser builds.
 - **Undo close** — a recently-closed stack reopens what you just closed
 - **Drag & drop** — drag a tab onto a stash, the new-stash dropzone, or Saved-for-later; drag stashes to reorder; rename a stash inline
 - **⌘K command palette** — fuzzy search across open tabs, saved tabs, and stashes; jump / open / restore by keyboard (`/` also opens it)
+- **Search operators** — narrow the palette with `open:`, `saved:`, `stash:`, `workspace:`, or `older:7d`; tags and notes are searchable too
+- **Address-bar commands** — type `perch` in the omnibox, then search or run `stash`, `suspend`, or `workspace <name>`
 - **Native tab groups** — reflects Chrome's tab groups (color + title); "Group in browser" / "Ungroup" from any card
 - **Memory saver** — suspend inactive tabs to free RAM, with an estimated "~X freed"
 - **Proactive cleanup** — surfaces tabs untouched for 7+ days to stash or close in bulk
 - **Cross-device sync** — settings, stashes, and saved tabs follow you via your browser profile (quota-safe, no login)
+- **Recovery timeline** — rolling snapshots every 15 minutes, plus safety snapshots before workspace switches; restore only missing tabs
+- **Control center** — health checks for duplicates, stale tabs, tracking URLs, and memory-saving candidates
+- **Automation rules** — stash, deduplicate, or suspend matching domains by age, with pinned-tab protection
+- **Scheduled routines** — optionally open a routine at a local daily time
 
 **Organize**
 
@@ -50,6 +56,7 @@ HMR, and cross-browser builds.
 - Bookmark a tab to a checklist before closing it
 - Check items off into a collapsible **archive**; **search** the archive; dismiss anything
 - Persists in `browser.storage.local` across restarts
+- Add searchable tags and notes to saved tabs and stashes
 
 **Feel**
 
@@ -58,6 +65,7 @@ HMR, and cross-browser builds.
 - Time-of-day greeting, toasts, and an "inbox zero" empty state
 - **Live-updating** — the dashboard reflects tab changes in real time
 - **100% local** — no server, no account, no data leaves your machine (only favicons + the web font are fetched)
+- **Portable backups** — export plain JSON or an AES-256-GCM encrypted backup protected by your passphrase
 
 **Under the hood**
 
@@ -81,6 +89,7 @@ pnpm install
 pnpm dev          # launches a dev browser with the extension loaded
 pnpm test         # typecheck + unit tests
 pnpm build        # production build → .output/chrome-mv3
+pnpm build:local  # refresh ~/chrome-extensions/perch; loaded local builds auto-reload
 pnpm zip          # packaged zip for the store
 pnpm build:firefox / pnpm dev:firefox
 ```

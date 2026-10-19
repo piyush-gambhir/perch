@@ -6,14 +6,31 @@
 
 import { getSettings, saveSettings, type Settings } from './settings';
 import { loadSynced, mutateSynced } from './syncedStore';
-import type { DeferredTab, Routine, Session, StashedTab, Workspace } from './types';
+import type { AutomationRule, DeferredTab, Routine, Session, StashedTab, Workspace } from './types';
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
+
+// Only schemes a restore can actually reopen; keeps javascript:/data:/chrome:// out
+// of stashes where a later tabs.create would choke on (or execute) them.
+const SAFE_SCHEMES = ['http:', 'https:', 'file:'];
+function isRestorableUrl(url: string): boolean {
+  try {
+    return SAFE_SCHEMES.includes(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+}
 
 function validTabs(v: unknown): StashedTab[] {
   if (!Array.isArray(v)) return [];
   return v
-    .filter((t): t is StashedTab => !!t && typeof t === 'object' && isStr((t as StashedTab).url))
+    .filter(
+      (t): t is StashedTab =>
+        !!t &&
+        typeof t === 'object' &&
+        isStr((t as StashedTab).url) &&
+        isRestorableUrl((t as StashedTab).url),
+    )
     .map((t) => ({ url: t.url, title: isStr(t.title) ? t.title : t.url }));
 }
 
@@ -35,15 +52,17 @@ export interface Backup {
   routines: Routine[];
   workspaces: Workspace[];
   settings: Settings;
+  automationRules: AutomationRule[];
 }
 
 export async function exportAll(): Promise<Backup> {
-  const [sessions, deferred, routines, workspaces, settings] = await Promise.all([
+  const [sessions, deferred, routines, workspaces, settings, automationRules] = await Promise.all([
     loadSynced<Session>('sessions'),
     loadSynced<DeferredTab>('deferred'),
     loadSynced<Routine>('routines'),
     loadSynced<Workspace>('workspaces'),
     getSettings(),
+    loadSynced<AutomationRule>('automationRules'),
   ]);
   return {
     app: 'perch',
@@ -54,6 +73,7 @@ export async function exportAll(): Promise<Backup> {
     routines,
     workspaces,
     settings,
+    automationRules,
   };
 }
 
@@ -88,18 +108,42 @@ export async function importAll(raw: unknown): Promise<string> {
     counts.push(`${workspaces.length} workspaces`);
   }
   if (data.deferred !== undefined) {
-    const deferred = (Array.isArray(data.deferred) ? data.deferred : []).filter(
-      (t): t is DeferredTab =>
-        !!t &&
-        typeof t === 'object' &&
-        isStr((t as DeferredTab).id) &&
-        isStr((t as DeferredTab).url),
-    );
+    const deferred = (Array.isArray(data.deferred) ? data.deferred : [])
+      .filter(
+        (t): t is DeferredTab =>
+          !!t &&
+          typeof t === 'object' &&
+          isStr((t as DeferredTab).id) &&
+          isStr((t as DeferredTab).url) &&
+          isRestorableUrl((t as DeferredTab).url),
+      )
+      .map((t) => ({
+        id: t.id,
+        url: t.url,
+        title: isStr(t.title) ? t.title : t.url,
+        savedAt: isStr(t.savedAt) ? t.savedAt : new Date().toISOString(),
+        completed: t.completed === true,
+        dismissed: t.dismissed === true,
+        ...(t.completed === true && isStr(t.completedAt) ? { completedAt: t.completedAt } : {}),
+      }));
     await mutateSynced<DeferredTab>('deferred', () => deferred);
     counts.push(`${deferred.length} saved`);
   }
   if (data.settings && typeof data.settings === 'object') {
     await saveSettings(data.settings as Partial<Settings>);
+  }
+  if (data.automationRules !== undefined) {
+    const rules = (Array.isArray(data.automationRules) ? data.automationRules : []).filter(
+      (rule): rule is AutomationRule =>
+        !!rule &&
+        typeof rule === 'object' &&
+        isStr((rule as AutomationRule).id) &&
+        isStr((rule as AutomationRule).name) &&
+        isStr((rule as AutomationRule).hostname) &&
+        ['stash', 'close-duplicates', 'suspend'].includes((rule as AutomationRule).action),
+    );
+    await mutateSynced<AutomationRule>('automationRules', () => rules);
+    counts.push(`${rules.length} rules`);
   }
   return counts.length ? `Imported ${counts.join(', ')}` : 'Nothing to import';
 }
@@ -107,11 +151,91 @@ export async function importAll(raw: unknown): Promise<string> {
 /** Trigger a download of the current backup as a .json file. */
 export async function downloadBackup(): Promise<void> {
   const data = await exportAll();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  downloadJson(
+    JSON.stringify(data, null, 2),
+    `perch-backup-${new Date().toISOString().slice(0, 10)}.json`,
+  );
+}
+
+interface EncryptedBackup {
+  app: 'perch-encrypted';
+  version: 1;
+  salt: string;
+  iv: string;
+  data: string;
+}
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+const toBase64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+};
+const fromBase64 = (value: string): Uint8Array =>
+  Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+
+async function encryptionKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
+  const material = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations: 250_000, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+export async function encryptBackup(passphrase: string): Promise<EncryptedBackup> {
+  if (passphrase.length < 8) throw new Error('Passphrase must be at least 8 characters.');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    await encryptionKey(passphrase, salt),
+    encoder.encode(JSON.stringify(await exportAll())),
+  );
+  return {
+    app: 'perch-encrypted',
+    version: 1,
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    data: toBase64(new Uint8Array(encrypted)),
+  };
+}
+
+export async function decryptBackup(raw: unknown, passphrase: string): Promise<Backup> {
+  if (!raw || typeof raw !== 'object' || (raw as EncryptedBackup).app !== 'perch-encrypted')
+    throw new Error('Not an encrypted Perch backup.');
+  const envelope = raw as EncryptedBackup;
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: fromBase64(envelope.iv) as BufferSource },
+    await encryptionKey(passphrase, fromBase64(envelope.salt)),
+    fromBase64(envelope.data) as BufferSource,
+  );
+  return JSON.parse(decoder.decode(decrypted)) as Backup;
+}
+
+export async function downloadEncryptedBackup(passphrase: string): Promise<void> {
+  const envelope = await encryptBackup(passphrase);
+  downloadJson(
+    JSON.stringify(envelope),
+    `perch-backup-${new Date().toISOString().slice(0, 10)}.encrypted.json`,
+  );
+}
+
+function downloadJson(contents: string, filename: string): void {
+  const blob = new Blob([contents], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `perch-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();

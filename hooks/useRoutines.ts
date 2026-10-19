@@ -17,9 +17,12 @@ export function useRoutines(): UseRoutines {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const initial = setTimeout(refresh, 0);
     const unsub = onRoutinesChanged(refresh);
-    return unsub;
+    return () => {
+      clearTimeout(initial);
+      unsub();
+    };
   }, [refresh]);
 
   return { routines, refresh };

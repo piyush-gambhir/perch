@@ -17,6 +17,12 @@ export interface TabInfo {
   discarded?: boolean;
   /** Native Chrome tab-group id, or -1 if ungrouped. */
   groupId?: number;
+  /** True if the tab is pinned — pinned tabs are protected from bulk close/stash/suspend. */
+  pinned?: boolean;
+  /** True if the tab is currently playing audio. */
+  audible?: boolean;
+  /** The favicon the browser already has for this tab, when available. */
+  favIconUrl?: string;
 }
 
 /** A native Chrome tab group (chrome.tabGroups). */
@@ -30,6 +36,10 @@ export interface NativeGroup {
 export interface StashedTab {
   url: string;
   title: string;
+  pinned?: boolean;
+  group?: string;
+  tags?: string[];
+  note?: string;
 }
 
 /** A named, restorable set of tabs (a "stash"). */
@@ -40,6 +50,8 @@ export interface Session {
   tabs: StashedTab[];
   /** True for sessions created by the auto-stash job (so it can append, not duplicate). */
   auto?: boolean;
+  tags?: string[];
+  note?: string;
 }
 
 /** A record of a recent close, kept so it can be undone. */
@@ -56,6 +68,10 @@ export interface Routine {
   name: string;
   createdAt: string;
   tabs: StashedTab[];
+  tags?: string[];
+  note?: string;
+  /** Optional local time (HH:MM) used by scheduled automation. */
+  schedule?: string;
 }
 
 /** A named tab context you switch between; holds the tabs captured when you left it. */
@@ -63,6 +79,8 @@ export interface Workspace {
   id: string;
   name: string;
   tabs: StashedTab[];
+  tags?: string[];
+  note?: string;
 }
 
 /** A group of tabs shown as one card on the dashboard. */
@@ -87,6 +105,27 @@ export interface DeferredTab {
   completed: boolean;
   completedAt?: string;
   dismissed: boolean;
+  tags?: string[];
+  note?: string;
+}
+
+export interface Snapshot {
+  id: string;
+  createdAt: string;
+  reason: 'automatic' | 'manual' | 'before-switch';
+  windows: { windowId?: number; tabs: StashedTab[] }[];
+}
+
+export type AutomationAction = 'stash' | 'close-duplicates' | 'suspend';
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  hostname: string;
+  olderThanDays: number;
+  action: AutomationAction;
+  excludePinned: boolean;
 }
 
 /** Active vs. archived split of saved tabs. */

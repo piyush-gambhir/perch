@@ -167,9 +167,35 @@ export function getDateDisplay(now: Date = new Date()): string {
   });
 }
 
+/** Extract a clean hostname from a URL, stripping a leading "www." (empty on failure). */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
 /** Google's favicon service URL for a hostname. */
 export function faviconUrl(hostname: string): string {
   return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+}
+
+/**
+ * Pick the favicon src for a favicon <img>. Prefers the browser's own cached
+ * favicon (keeping things local) when it's a renderable http(s)/data: URL, and
+ * falls back to the Google favicon service for the hostname otherwise.
+ */
+export function faviconSrc(hostname: string, favIconUrl?: string): string {
+  if (
+    favIconUrl &&
+    (favIconUrl.startsWith('https://') ||
+      favIconUrl.startsWith('http://') ||
+      favIconUrl.startsWith('data:'))
+  ) {
+    return favIconUrl;
+  }
+  return faviconUrl(hostname);
 }
 
 /** Only allow safe link schemes; blocks javascript:/data: and other injection vectors. */

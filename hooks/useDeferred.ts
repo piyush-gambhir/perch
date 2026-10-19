@@ -11,6 +11,7 @@ import {
   getSavedTabs,
   onSavedTabsChanged,
   saveTabForLater,
+  updateSavedTabMeta,
 } from '../utils/storage';
 import type { DeferredTab } from '../utils/types';
 
@@ -21,6 +22,7 @@ export interface UseDeferred {
   checkOff: (id: string) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+  updateMeta: (id: string, tags: string[], note: string) => Promise<void>;
 }
 
 export function useDeferred(): UseDeferred {
@@ -34,9 +36,12 @@ export function useDeferred(): UseDeferred {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const initial = setTimeout(refresh, 0);
     const unsub = onSavedTabsChanged(refresh);
-    return unsub;
+    return () => {
+      clearTimeout(initial);
+      unsub();
+    };
   }, [refresh]);
 
   const save = useCallback(
@@ -63,5 +68,13 @@ export function useDeferred(): UseDeferred {
     [refresh],
   );
 
-  return { active, archived, save, checkOff, dismiss, refresh };
+  const updateMeta = useCallback(
+    async (id: string, tags: string[], note: string) => {
+      await updateSavedTabMeta(id, { tags, note });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { active, archived, save, checkOff, dismiss, refresh, updateMeta };
 }

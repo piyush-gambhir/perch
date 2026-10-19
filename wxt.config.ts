@@ -15,5 +15,16 @@ export default defineConfig({
     action: {
       default_title: 'Perch',
     },
+    omnibox: {
+      keyword: 'perch',
+    },
+    browser_specific_settings: {
+      gecko: {
+        id: 'perch-extension@piyushgambhir.com',
+        data_collection_permissions: {
+          required: ['none'],
+        },
+      },
+    },
   },
 });
