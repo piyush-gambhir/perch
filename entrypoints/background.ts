@@ -11,17 +11,17 @@ import { appendOrCreateSession, closableTabs, saveSession, toStashedTabs } from 
 import { getSettings } from '../utils/settings';
 import { staleTabs } from '../utils/stale';
 import {
-  closeDuplicateTabs,
   closeTabsByIds,
   countRealTabs,
   fetchOpenTabs,
   focusTab,
   isInternalUrl,
   openUrl,
+  suspendTabsByIds,
   suspendTabsExcept,
 } from '../utils/tabs';
 import { captureSnapshot } from '../utils/snapshots';
-import { getAutomationRules, tabsMatchingRule } from '../utils/automation';
+import { duplicateIdsToClose, getAutomationRules, tabsMatchingRule } from '../utils/automation';
 import { getWorkspaces, switchWorkspace } from '../utils/workspaces';
 import { getRoutines, openRoutine } from '../utils/routines';
 
@@ -115,19 +115,22 @@ async function runAutoStash(): Promise<void> {
 }
 
 async function runAutomationRules(): Promise<void> {
-  const tabs = (await fetchOpenTabs()).filter((tab) => !tab.isPerchTab && !isInternalUrl(tab.url));
   for (const rule of await getAutomationRules()) {
+    // Re-read per rule so an earlier rule's closes can't make a later one act on stale tabs.
+    const tabs = (await fetchOpenTabs()).filter(
+      (tab) => !tab.isPerchTab && !isInternalUrl(tab.url),
+    );
     const matches = tabsMatchingRule(rule, tabs);
     if (!matches.length) continue;
+    // Every action touches only the rule's own matches, never other tabs.
     if (rule.action === 'stash') {
       const stashed = toStashedTabs(matches);
       await appendOrCreateSession(`Rule · ${rule.name}`, stashed);
       await closeTabsByIds(matches.map((tab) => tab.id));
     } else if (rule.action === 'close-duplicates') {
-      await closeDuplicateTabs(matches.map((tab) => tab.url));
+      await closeTabsByIds(duplicateIdsToClose(matches, tabs));
     } else if (rule.action === 'suspend') {
-      const keep = tabs.filter((tab) => !matches.includes(tab)).map((tab) => tab.id);
-      await suspendTabsExcept(keep);
+      await suspendTabsByIds(matches.map((tab) => tab.id));
     }
   }
 }

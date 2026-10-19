@@ -335,6 +335,12 @@ export async function suspendTabsExcept(keepIds: (number | undefined)[]): Promis
   return suspendWhere((id) => !keep.has(id));
 }
 
+/** Suspend exactly these tabs (an automation rule's matches), with the usual skips. */
+export async function suspendTabsByIds(ids: (number | undefined)[]): Promise<number> {
+  const only = new Set(ids.filter((id): id is number => id !== undefined));
+  return suspendWhere((id) => only.has(id));
+}
+
 async function suspendWhere(predicate: (id: number) => boolean): Promise<number> {
   const tabs = await browser.tabs.query({});
   let count = 0;
