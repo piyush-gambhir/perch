@@ -8,7 +8,7 @@ import {
   onAutomationRulesChanged,
   updateAutomationRule,
 } from '../utils/automation';
-import { analyzeTabHealth, canonicalUrl } from '../utils/health';
+import { analyzeTabHealth, stripTrackingParams } from '../utils/health';
 import {
   captureSnapshot,
   deleteSnapshot,
@@ -73,7 +73,8 @@ export function ControlCenter({ open, tabs, onClose, onRefresh }: Props) {
 
   const cleanTracking = async () => {
     for (const tab of health.tracking) {
-      if (tab.id !== undefined) await browser.tabs.update(tab.id, { url: canonicalUrl(tab.url) });
+      if (tab.id !== undefined)
+        await browser.tabs.update(tab.id, { url: stripTrackingParams(tab.url) });
     }
     toast(
       `Cleaned ${health.tracking.length} tracking URL${health.tracking.length === 1 ? '' : 's'}`,
