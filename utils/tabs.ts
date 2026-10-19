@@ -199,11 +199,14 @@ export async function openUrls(urls: string[], windowId?: number): Promise<void>
   }
 }
 
-/** Restore metadata-rich tabs, optionally skipping URLs that are already open. */
+/**
+ * Restore metadata-rich tabs, optionally skipping URLs that are already open.
+ * `failed` lists the tabs whose URL never opened, so callers can keep those records.
+ */
 export async function openStashedTabs(
   tabs: StashedTab[],
   options: { windowId?: number; skipOpen?: boolean } = {},
-): Promise<{ opened: number; skipped: number; failed: number }> {
+): Promise<{ opened: number; skipped: number; failed: StashedTab[] }> {
   const existing = options.skipOpen
     ? new Set(
         (await browser.tabs.query({})).map((tab) => tab.url).filter((url): url is string => !!url),
@@ -211,7 +214,7 @@ export async function openStashedTabs(
     : new Set<string>();
   let opened = 0;
   let skipped = 0;
-  let failed = 0;
+  const failed: StashedTab[] = [];
   for (const tab of tabs) {
     if (!tab.url || existing.has(tab.url)) {
       skipped += 1;
@@ -227,10 +230,11 @@ export async function openStashedTabs(
       existing.add(tab.url);
       opened += 1;
     } catch {
-      failed += 1;
+      failed.push(tab);
     }
   }
-  return { opened, skipped, failed };
+  // A later copy of the same URL may have opened after an earlier one failed.
+  return { opened, skipped, failed: failed.filter((tab) => !existing.has(tab.url)) };
 }
 
 /** Focus the tab with the given URL (exact, then hostname fallback), across windows. */

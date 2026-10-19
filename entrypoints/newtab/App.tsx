@@ -118,6 +118,11 @@ function formatFreed(n: number): string {
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 }
 
+/** Toast for a restore where some tabs could not open (their records are kept). */
+function failedToOpen(failed: number): string {
+  return `Couldn't open ${failed} tab${failed !== 1 ? 's' : ''}. Kept for another try.`;
+}
+
 function Dashboard() {
   const { realTabs, groups, tabOutCount, refresh } = useTabs();
   const deferred = useDeferred();
@@ -290,8 +295,10 @@ function Dashboard() {
   };
 
   const handleUndo = async () => {
-    const ok = await undoLastClose();
-    showToast(ok ? 'Reopened' : 'Nothing to undo');
+    const result = await undoLastClose();
+    showToast(
+      !result ? 'Nothing to undo' : result.failed ? failedToOpen(result.failed) : 'Reopened',
+    );
     await refresh();
   };
 
@@ -306,14 +313,14 @@ function Dashboard() {
       )
         return;
     }
-    await restoreSession(id, { remove: true });
-    showToast('Stash restored');
+    const { failed } = await restoreSession(id, { remove: true });
+    showToast(failed ? failedToOpen(failed) : 'Stash restored');
     await refresh();
   };
 
   const handleRestoreNewWindow = async (id: string) => {
-    await restoreSession(id, { remove: true, newWindow: true });
-    showToast('Opened in a new window');
+    const { failed } = await restoreSession(id, { remove: true, newWindow: true });
+    showToast(failed ? failedToOpen(failed) : 'Opened in a new window');
     await refresh();
   };
 
