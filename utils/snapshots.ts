@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { uid } from './id';
+import { withLock } from './locks';
 import { isInternalUrl, openUrls } from './tabs';
 import type { Snapshot, StashedTab } from './types';
 
@@ -12,39 +13,49 @@ export async function getSnapshots(): Promise<Snapshot[]> {
   return Array.isArray(result.snapshots) ? result.snapshots : [];
 }
 
+/**
+ * Every snapshot write is a read-modify-write of one list, done from both the page
+ * and the service worker, so all of them run under this cross-context lock.
+ */
+const mutateSnapshots = <T>(fn: () => Promise<T>) => withLock(`perch-store:${KEY}`, fn);
+
 export async function captureSnapshot(
   reason: Snapshot['reason'] = 'manual',
   force = false,
 ): Promise<Snapshot | null> {
-  const existing = await getSnapshots();
-  const latest = existing[0];
-  if (!force && latest && Date.now() - Date.parse(latest.createdAt) < MIN_INTERVAL) return null;
-  const tabs = await browser.tabs.query({});
-  const byWindow = new Map<number | undefined, StashedTab[]>();
-  for (const tab of tabs) {
-    if (!tab.url || tab.incognito || isInternalUrl(tab.url)) continue;
-    const list = byWindow.get(tab.windowId) ?? [];
-    list.push({
-      url: tab.url,
-      title: tab.title || tab.url,
-      pinned: tab.pinned || undefined,
-    });
-    byWindow.set(tab.windowId, list);
-  }
-  const snapshot: Snapshot = {
-    id: uid(),
-    createdAt: new Date().toISOString(),
-    reason,
-    windows: [...byWindow].map(([windowId, windowTabs]) => ({ windowId, tabs: windowTabs })),
-  };
-  if (snapshot.windows.every((window) => window.tabs.length === 0)) return null;
-  await browser.storage.local.set({ [KEY]: [snapshot, ...existing].slice(0, LIMIT) });
-  return snapshot;
+  return mutateSnapshots(async () => {
+    const existing = await getSnapshots();
+    const latest = existing[0];
+    if (!force && latest && Date.now() - Date.parse(latest.createdAt) < MIN_INTERVAL) return null;
+    const tabs = await browser.tabs.query({});
+    const byWindow = new Map<number | undefined, StashedTab[]>();
+    for (const tab of tabs) {
+      if (!tab.url || tab.incognito || isInternalUrl(tab.url)) continue;
+      const list = byWindow.get(tab.windowId) ?? [];
+      list.push({
+        url: tab.url,
+        title: tab.title || tab.url,
+        pinned: tab.pinned || undefined,
+      });
+      byWindow.set(tab.windowId, list);
+    }
+    const snapshot: Snapshot = {
+      id: uid(),
+      createdAt: new Date().toISOString(),
+      reason,
+      windows: [...byWindow].map(([windowId, windowTabs]) => ({ windowId, tabs: windowTabs })),
+    };
+    if (snapshot.windows.every((window) => window.tabs.length === 0)) return null;
+    await browser.storage.local.set({ [KEY]: [snapshot, ...existing].slice(0, LIMIT) });
+    return snapshot;
+  });
 }
 
 export async function deleteSnapshot(id: string): Promise<void> {
-  await browser.storage.local.set({
-    [KEY]: (await getSnapshots()).filter((snapshot) => snapshot.id !== id),
+  await mutateSnapshots(async () => {
+    await browser.storage.local.set({
+      [KEY]: (await getSnapshots()).filter((snapshot) => snapshot.id !== id),
+    });
   });
 }
 
