@@ -27,8 +27,8 @@ describe('restoreSession keeps tabs that failed to open', () => {
     expect(await restoreSession(session!.id, { remove: true })).toEqual({ opened: 1, failed: 1 });
     expect(openUrls()).toEqual([A.url]);
     const [left] = await getSessions();
-    expect(left.id).toBe(session!.id);
-    expect(left.tabs).toEqual([B]);
+    expect(left?.id).toBe(session!.id);
+    expect(left?.tabs).toEqual([B]);
   });
 
   it('removes the stash once everything opened', async () => {
@@ -43,7 +43,7 @@ describe('restoreSession keeps tabs that failed to open', () => {
 
     const result = await restoreSession(session!.id, { remove: true, newWindow: true });
     expect(result).toEqual({ opened: 1, failed: 1 });
-    expect((await getSessions())[0].tabs).toEqual([A]);
+    expect((await getSessions())[0]?.tabs).toEqual([A]);
   });
 });
 
@@ -54,11 +54,11 @@ describe('restoreClosed (undo) keeps its record until the tabs open', () => {
 
     expect(await undoLastClose()).toEqual({ opened: 1, failed: 1 });
     const [record] = await getRecentlyClosed();
-    expect(record.tabs).toEqual([A]);
+    expect(record?.tabs).toEqual([A]);
 
     // A retry once the URL can open drains the record.
     fake.failUrls.clear();
-    expect(await restoreClosed(record.id)).toEqual({ opened: 1, failed: 0 });
+    expect(await restoreClosed(record!.id)).toEqual({ opened: 1, failed: 0 });
     expect(await getRecentlyClosed()).toEqual([]);
   });
 
@@ -66,13 +66,13 @@ describe('restoreClosed (undo) keeps its record until the tabs open', () => {
     await pushClosed('Gone window', [A]);
     fake.failUrls.add(A.url);
     expect(await undoLastClose()).toEqual({ opened: 0, failed: 1 });
-    expect((await getRecentlyClosed())[0].tabs).toEqual([A]);
+    expect((await getRecentlyClosed())[0]?.tabs).toEqual([A]);
   });
 
   it('serializes concurrent undos so tabs reopen once', async () => {
     await pushClosed('Double click', [A, B]);
     const [record] = await getRecentlyClosed();
-    const results = await Promise.all([restoreClosed(record.id), restoreClosed(record.id)]);
+    const results = await Promise.all([restoreClosed(record!.id), restoreClosed(record!.id)]);
     expect(results.filter(Boolean)).toHaveLength(1);
     expect(openUrls()).toEqual([A.url, B.url]);
     expect(await getRecentlyClosed()).toEqual([]);

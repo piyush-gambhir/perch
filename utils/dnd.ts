@@ -52,6 +52,7 @@ export function reorderById<T>(
   if (from < 0 || to < 0 || from === to) return items;
   const next = items.slice();
   const [moved] = next.splice(from, 1);
+  if (moved === undefined) return items;
   next.splice(to, 0, moved);
   return next;
 }

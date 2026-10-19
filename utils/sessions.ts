@@ -139,6 +139,7 @@ export async function restoreSession(
     // The window is created with the first tab; if that URL is unopenable (e.g. from
     // an imported backup), fall back to an empty window and retry it with the rest.
     const [first, ...rest] = restored;
+    if (!first) return { opened: 0, failed: 0 };
     let win: { id?: number } | undefined;
     let remaining = rest;
     let openedFirst = 0;
@@ -223,7 +224,9 @@ export async function restoreClosed(
 export async function undoLastClose(): Promise<{ opened: number; failed: number } | null> {
   const existing = await getRecentlyClosed();
   if (existing.length === 0) return null;
-  return restoreClosed(existing[0].id);
+  const latest = existing[0];
+  if (!latest) return null;
+  return restoreClosed(latest.id);
 }
 
 /** Subscribe to changes in either sessions (synced) or the undo stack (local). */

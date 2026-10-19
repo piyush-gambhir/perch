@@ -147,7 +147,7 @@ async function runScheduledRoutines(): Promise<void> {
   const runs = state.routineScheduleRuns ?? {};
   for (const routine of await getRoutines()) {
     if (!routine.schedule || runs[routine.id] === today) continue;
-    const [hours, mins] = routine.schedule.split(':').map(Number);
+    const [hours = NaN, mins = NaN] = routine.schedule.split(':').map(Number);
     if (!Number.isFinite(hours) || !Number.isFinite(mins)) continue;
     const target = hours * 60 + mins;
     if (minutes < target || minutes - target >= 20) continue;

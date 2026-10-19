@@ -127,6 +127,11 @@ Edit `utils/config.ts`:
 
 All grouping logic in `utils/grouping.ts` is pure and unit-tested.
 
+## License
+
+Perch is available under the [MIT License](LICENSE). The bundled Inter font is
+available under the [SIL Open Font License 1.1](public/fonts/Inter-LICENSE.txt).
+
 ---
 
 Built by Piyush Gambhir. Original concept by

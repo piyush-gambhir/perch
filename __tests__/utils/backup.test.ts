@@ -30,8 +30,8 @@ async function seed() {
   await saveTabForLater({ url: 'https://saved.test/', title: 'Saved' });
   await saveTabForLater({ url: 'https://done.test/', title: 'Done' });
   const { active } = await getSavedTabs();
-  await updateSavedTabMeta(active[0].id, { tags: ['tagged'], note: 'a note' });
-  await checkOffSavedTab(active[1].id);
+  await updateSavedTabMeta(active[0]!.id, { tags: ['tagged'], note: 'a note' });
+  await checkOffSavedTab(active[1]!.id);
   await addAutomationRule({
     name: 'Old docs',
     enabled: true,
@@ -55,9 +55,9 @@ describe('backup round trip', () => {
     await importAll(asFile(before));
     const after = await exportAll();
     expect(withoutStamp(after)).toEqual(withoutStamp(before));
-    expect(after.sessions[0].tabs[0]).toMatchObject({ pinned: true, group: 'Work', note: 'n' });
+    expect(after.sessions[0]?.tabs[0]).toMatchObject({ pinned: true, group: 'Work', note: 'n' });
     expect(after.deferred[0]).toMatchObject({ tags: ['tagged'], note: 'a note' });
-    expect(after.routines[0].schedule).toBe('08:30');
+    expect(after.routines[0]?.schedule).toBe('08:30');
   });
 
   it('keeps the same metadata through an encrypted backup', async () => {
@@ -98,7 +98,7 @@ describe('backup round trip', () => {
       tags: ['ok'],
       tabs: [{ url: 'https://a.test/', title: 'A' }],
     });
-    expect(routines[0].schedule).toBeUndefined();
+    expect(routines[0]?.schedule).toBeUndefined();
     expect(automationRules).toEqual([
       {
         id: 'b',

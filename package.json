@@ -5,6 +5,10 @@
   "description": "Perch — New tab page that groups your open tabs by domain and lets you close them with style.",
   "author": "Piyush Gambhir",
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "build": "pnpm run generate:icons && wxt build",
     "build:local": "pnpm run build && node ./tools/publish-local.mjs",
@@ -24,27 +28,30 @@
     "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox"
   },
   "dependencies": {
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@tailwindcss/postcss": "^4.3.2",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
-    "eslint": "^9.39.4",
+    "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.3",
-    "jsdom": "^29.1.1",
-    "postcss": "^8.5.16",
-    "prettier": "^3.9.5",
-    "sharp": "^0.35.3",
-    "tailwindcss": "^4.3.2",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "jsdom": "^30.1.2",
+    "postcss": "^8.5.29",
+    "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.63.0",
-    "vitest": "^4.1.10",
-    "wxt": "^0.20.26"
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3",
+    "web-ext": "^10.7.0",
+    "wxt": "^0.21.4"
   }
 }

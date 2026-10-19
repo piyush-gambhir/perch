@@ -123,8 +123,8 @@ export function groupTabs(
       }
       if (!key) continue;
 
-      if (!groupMap[key]) groupMap[key] = { domain: key, tabs: [] };
-      groupMap[key].tabs.push(tab);
+      const group = (groupMap[key] ??= { domain: key, tabs: [] });
+      group.tabs.push(tab);
     } catch {
       // Skip malformed URLs
     }

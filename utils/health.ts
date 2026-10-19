@@ -19,7 +19,7 @@ const TRACKING = [
 
 /** Decoded name of one raw `key=value` query pair, as URLSearchParams would read it. */
 function paramName(pair: string): string {
-  const key = pair.split('=')[0].replace(/\+/g, ' ');
+  const key = (pair.split('=')[0] ?? '').replace(/\+/g, ' ');
   try {
     return decodeURIComponent(key);
   } catch {
