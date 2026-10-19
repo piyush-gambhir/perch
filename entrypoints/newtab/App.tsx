@@ -881,19 +881,19 @@ function Dashboard() {
         </div>
 
         <aside className="sidebar">
-          {sessions.length > 0 && (
-            <Sessions
-              sessions={sessions}
-              onRestore={handleRestoreSession}
-              onRestoreNewWindow={handleRestoreNewWindow}
-              onRename={handleRenameSession}
-              onDelete={handleDeleteSession}
-              onMeta={(id, tags, note) => updateSessionMeta(id, { tags, note })}
-              onReorder={handleReorderSession}
-              onDropToSession={handleDropToSession}
-              onCreateStashFromDrop={handleCreateStashFromDrop}
-            />
-          )}
+          {/* Stashed and Saved for later stay mounted when empty: they are the drop
+              targets that create the first stash or saved tab by dragging. */}
+          <Sessions
+            sessions={sessions}
+            onRestore={handleRestoreSession}
+            onRestoreNewWindow={handleRestoreNewWindow}
+            onRename={handleRenameSession}
+            onDelete={handleDeleteSession}
+            onMeta={(id, tags, note) => updateSessionMeta(id, { tags, note })}
+            onReorder={handleReorderSession}
+            onDropToSession={handleDropToSession}
+            onCreateStashFromDrop={handleCreateStashFromDrop}
+          />
           {routines.length > 0 && (
             <Routines
               routines={routines}
@@ -906,29 +906,14 @@ function Dashboard() {
               onDelete={handleDeleteRoutine}
             />
           )}
-          {(deferred.active.length > 0 || deferred.archived.length > 0) && (
-            <SavedForLater
-              active={deferred.active}
-              archived={deferred.archived}
-              onCheck={deferred.checkOff}
-              onDismiss={deferred.dismiss}
-              onMeta={deferred.updateMeta}
-              onDropSave={handleDropSave}
-            />
-          )}
-          {sessions.length === 0 &&
-            routines.length === 0 &&
-            deferred.active.length === 0 &&
-            deferred.archived.length === 0 && (
-              <div className="shelf-empty">
-                <span className="overview-eyebrow">Your shelf</span>
-                <strong>Keep something worth returning to.</strong>
-                <p>Stash a group, save a tab, or capture today as a reusable routine.</p>
-                <button className="overview-secondary" onClick={handleCreateRoutine}>
-                  Save current tabs
-                </button>
-              </div>
-            )}
+          <SavedForLater
+            active={deferred.active}
+            archived={deferred.archived}
+            onCheck={deferred.checkOff}
+            onDismiss={deferred.dismiss}
+            onMeta={deferred.updateMeta}
+            onDropSave={handleDropSave}
+          />
         </aside>
       </div>
 

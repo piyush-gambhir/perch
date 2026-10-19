@@ -264,14 +264,12 @@ body {
   text-transform: uppercase;
 }
 
-.overview-copy > strong,
-.shelf-empty > strong {
+.overview-copy > strong {
   font-size: 16px;
   letter-spacing: -0.015em;
 }
 
-.overview-copy > span:last-child,
-.shelf-empty p {
+.overview-copy > span:last-child {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.45;
@@ -825,15 +823,6 @@ header {
   border: 1px solid var(--border);
   box-shadow: none;
   padding: 18px;
-}
-
-.shelf-empty {
-  display: grid;
-  gap: 9px;
-  padding: 20px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--surface) 65%, transparent);
 }
 
 .deferred-column .section-header,
