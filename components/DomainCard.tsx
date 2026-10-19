@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { friendlyDomain } from '../utils/format';
 import { duplicateInfo, uniqueByUrl } from '../utils/grouping';
+import { closableTabs } from '../utils/sessions';
 import { tabGroupColor } from '../utils/tabs';
 import type { DomainGroup } from '../utils/types';
 import { LANDING_PAGES_KEY } from '../utils/types';
@@ -48,7 +49,7 @@ export function DomainCard({
   const tabs = group.tabs || [];
   const tabCount = tabs.length;
   // Close and Stash leave pinned tabs open, so they count and act on the rest only.
-  const closableCount = tabs.filter((t) => !t.pinned).length;
+  const closableCount = closableTabs(tabs).length;
   const isLanding = group.domain === LANDING_PAGES_KEY;
   const isNative = group.groupId !== undefined && group.groupId >= 0;
   const isCustom = !!group.label && !isNative;
