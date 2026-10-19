@@ -1,87 +1,132 @@
-# Perch — Chrome Web Store listing
+# Perch: Chrome Web Store listing
 
-Copy/paste fields for the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole).
+Copy for the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole).
+This file is the source for the next submission, not a record of what the dashboard holds.
+Check it against the built manifest and [PRIVACY.md](../PRIVACY.md) before you paste.
+
+- **Visibility:** Unlisted
+- **Package:** `.output/perch-extension-<version>-chrome.zip` from `pnpm zip`
+- **Privacy policy URL:** https://github.com/piyush-gambhir/perch/blob/main/PRIVACY.md
 
 ---
 
 ## Name (45 max)
 
-Perch — Tab Dashboard & New Tab
+```text
+Perch: Tab Dashboard & New Tab
+```
 
-## Summary / short description (132 max)
+## Summary (132 max)
 
-A calm home for your tabs. Group open tabs by site, stash & restore sessions, search with ⌘K, and free memory — all 100% local.
+```text
+A calm new tab for everything you have open. Group tabs by site, stash and restore sessions, find any tab with ⌘K, undo any close.
+```
 
-## Category
+130 characters. Recount after any edit; the dashboard truncates silently.
 
-Productivity / Workflow & Planning
+## Category and language
 
-## Language
+Productivity, Workflow & Planning. English (United States).
 
-English (United States)
+## Description
 
----
+```text
+Perch turns your new tab page into a calm home for everything you have open.
 
-## Detailed description
+If you keep forty tabs open because closing one feels risky, Perch is for you. It groups your tabs by site, makes closing safe with stashes, undo and recovery snapshots, and finds any tab in a keystroke.
 
-**Perch turns your new tab page into a calm command center for everything you have open.**
-
-If you live with 40 tabs and are afraid to close any of them, Perch is for you. It groups your open tabs by site, makes closing safe with stashes and undo, and lets you find any tab instantly.
-
-**Organize**
-• Every open tab, grouped by site and sorted busiest-first
+ORGANIZE
+• Every open tab, grouped by site and sorted busiest first
 • Homepages (Gmail, X, LinkedIn, GitHub, YouTube) collected into one card
-• localhost tabs show their port so you can tell dev projects apart
+• Chrome's tab groups shown with their colour and name; group or ungroup from any card
+• Workspaces: switch between sets of tabs for different projects
 
-**Stop fearing the close button**
-• Stash a group — or all tabs — as a named, restorable session, then close them for real
-• One-click restore brings them all back
-• Undo reopens whatever you just closed
+CLOSE WITHOUT FEAR
+• Stash a group, or every tab, as a named session, then close them for real
+• Restore a stash in place or in a new window; drag tabs onto a stash
+• Undo brings back whatever you just closed
+• Recovery snapshots every 15 minutes, so you can reopen only the tabs that went missing
+• Pinned tabs are never closed by bulk actions
 
-**Find anything**
-• ⌘K command palette: fuzzy-search open tabs, saved items, and stashes
-• Jump to any tab — even across windows — by keyboard
+FIND ANYTHING
+• ⌘K command palette across open tabs, saved tabs and stashes
+• Filters such as open:, saved:, stash: and older:7d, plus your own tags and notes
+• Type "perch" in the address bar to search or run a command
 
-**Tidy up**
-• Duplicate detection with one-click cleanup
+TIDY UP
+• Control center: duplicates, tabs you haven't touched in days, tracking parameters, and tabs worth suspending
 • Suspend inactive tabs to free memory
-• A gentle nudge for tabs you haven't touched in a while
+• Automation rules that stash, deduplicate or suspend tabs by site and age
+• Routines: reusable sets of tabs you can open on demand or at a set time each day
 
-**Yours, and private**
-• 100% local — no account, no servers, no tracking
-• Light & dark themes, density and sound controls
-• Settings sync across your devices through your browser profile
+YOURS
+• No account, no analytics, no servers; icons come from Chrome's own cache
+• Saved tabs, stashes and settings follow you across your devices through Chrome Sync
+• Export a backup, optionally encrypted with a passphrase
+• Light and dark themes
 
-No setup. Open a new tab and you're home.
-
----
-
-## Permission justifications (paste into the dashboard's "Privacy practices" tab)
-
-- **tabs** — Perch reads open tab titles/URLs to display, group, focus, suspend, and close them on the dashboard. Core functionality.
-- **storage** — Saves your "Saved for later" items, stashes, routines, and settings (locally, and synced across your own devices via the browser profile).
-- **tabGroups** — Reflects Chrome's native tab groups on the dashboard and lets you create/ungroup them.
-- **alarms** — Runs the optional hourly auto-stash of stale tabs (off by default).
-- **contextMenus** — Adds the right-click "Stash in Perch" / "Save for later" actions.
-
-**Remote code:** No. All code is bundled in the package.
-**Data usage:** Perch does not collect or transmit user data. (See PRIVACY.md.)
-**Host permissions:** None requested.
+Open a new tab and you're home.
+```
 
 ---
 
-## Assets
+## Privacy practices tab
 
-- Icon: `public/icon/128.png` (store also derives others)
-- Screenshots: `store/screenshots/*.png` (1280×800)
-- Privacy policy URL: host `PRIVACY.md` (e.g. on piyushgambhir.com) and paste the link
+### Single purpose
 
-## Submission checklist
+```text
+Perch replaces the new tab page with a dashboard for the tabs you have open, so you can see, group, find, save and close them, and bring closed tabs back.
+```
 
-1. [ ] Create a developer account ($5 one-time) at the dashboard
-2. [ ] Run `pnpm zip` → upload `.output/perch-<version>-chrome.zip`
-3. [ ] Fill Name / Summary / Description / Category (above)
-4. [ ] Upload 1–5 screenshots from `store/screenshots/`
-5. [ ] Upload the 128px icon (auto-detected from the package)
-6. [ ] Privacy tab: paste permission justifications + privacy policy URL; declare no data collection
-7. [ ] Set visibility (Public / Unlisted) and submit for review
+### Permission justifications
+
+| Permission     | Justification                                                                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tabs`         | Perch reads the titles, URLs and state of your open tabs to show them grouped on the dashboard and to focus, suspend, stash, restore and close them when you ask.                                           |
+| `storage`      | Keeps your saved tabs, stashes, routines, workspaces, automation rules and settings. Most of it syncs between your own devices through Chrome Sync; undo history and recovery snapshots stay on the device. |
+| `tabGroups`    | Shows Chrome's tab groups on the dashboard and creates or removes a group when you press "Group in browser" or "Ungroup".                                                                                   |
+| `alarms`       | Runs scheduled background jobs: a recovery snapshot every 15 minutes, the automation rules you create, routines you schedule, and the optional auto-stash.                                                  |
+| `contextMenus` | Adds the right-click "Stash in Perch" and "Save for later" actions.                                                                                                                                         |
+| `favicon`      | Shows each tab's icon from Chrome's local favicon cache, so no icon is fetched from the internet.                                                                                                           |
+
+The manifest also declares the `perch` address-bar keyword (no permission needed).
+
+**Host permissions:** none. **Remote code:** No, all code ships in the package.
+
+### Data usage
+
+Google requires disclosure even when data never leaves the device
+([User Data FAQ, Q3](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)).
+
+- Tick **Web history**: Perch stores titles and URLs of your tabs (saved tabs, stashes,
+  snapshots, search history), and Chrome Sync carries part of it between your devices.
+- Leave every other category unticked.
+- Certify all three statements: data is not sold to third parties, not used or transferred
+  for purposes unrelated to the single purpose, and not used to determine creditworthiness.
+
+---
+
+## Graphics
+
+| File                                      | Size     | Shows                    |
+| ----------------------------------------- | -------- | ------------------------ |
+| `store/screenshots/1-dashboard-light.png` | 1280x800 | Dashboard, light theme   |
+| `store/screenshots/2-dashboard-dark.png`  | 1280x800 | Dashboard, dark theme    |
+| `store/screenshots/3-command-palette.png` | 1280x800 | ⌘K palette with a filter |
+| `store/screenshots/4-control-center.png`  | 1280x800 | Control center           |
+| `store/promo-tile.png`                    | 440x280  | Small promo tile         |
+
+Store icon: `public/icon/128.png` (also in the package).
+
+## Submit checklist
+
+1. [ ] `pnpm test` and `pnpm build` are green; `.output/chrome-mv3/manifest.json` lists exactly
+       `tabs, storage, tabGroups, alarms, contextMenus, favicon` and no host permissions.
+2. [ ] `pnpm zip`, then upload `.output/perch-extension-<version>-chrome.zip`.
+3. [ ] Paste name, summary, description, category and language from this file.
+4. [ ] Upload the screenshots and promo tile.
+5. [ ] Privacy tab: single purpose, permission justifications, "No" to remote code, Web history
+       ticked, certifications, and the privacy policy URL.
+6. [ ] Distribution: Unlisted, all regions.
+7. [ ] Submit for review, then set the repository variable `CHROME_EXTENSION_ID` to the new item's
+       ID so tagged releases publish from CI (see [PUBLISHING.md](../PUBLISHING.md)).

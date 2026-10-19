@@ -1,8 +1,7 @@
 # Perch
 
 **A calm home for your tabs.** A new-tab dashboard that groups your open tabs by
-domain and lets you close them with style (swoosh + confetti). 100% local — no
-server, no account.
+domain and makes closing them safe. No server, no account, no analytics.
 
 Built with [WXT](https://wxt.dev) + React + TypeScript: typed logic, unit tests,
 HMR, and cross-browser builds.
@@ -40,7 +39,7 @@ HMR, and cross-browser builds.
 - Friendly domain names (`github.com` → GitHub, `mail.google.com` → Gmail, …)
 - Cleaned-up titles: strips notification counts `(3)`, inline counts, email addresses, and `· X` suffixes
 - Smart titles synthesized from the URL for GitHub repos/PRs/issues, X posts, Reddit threads, YouTube videos
-- Per-site favicons; live toolbar **badge** with the open-tab count, color-coded green → amber → red as it grows
+- Per-site favicons from Chrome's own cache (never fetched from the internet); live toolbar **badge** with the open-tab count, color-coded green → amber → red as it grows
 
 **Act**
 
@@ -60,11 +59,10 @@ HMR, and cross-browser builds.
 
 **Feel**
 
-- Soft-modern UI, Inter font, indigo accent, **automatic light/dark**, borderless cards, responsive layout
-- Satisfying **swoosh** sound + **confetti** burst on close (synthesized, no asset files)
+- Soft-modern UI, bundled Inter font, **automatic light/dark** (or a fixed theme in Settings), borderless cards, responsive layout
 - Time-of-day greeting, toasts, and an "inbox zero" empty state
 - **Live-updating** — the dashboard reflects tab changes in real time
-- **100% local** — no server, no account, no data leaves your machine (only favicons + the web font are fetched)
+- **No server** and no account: data stays in your browser, and only Chrome Sync (if you use it) carries it between your own devices. See [PRIVACY.md](PRIVACY.md)
 - **Portable backups** — export plain JSON or an AES-256-GCM encrypted backup protected by your passphrase
 
 **Under the hood**
@@ -74,13 +72,12 @@ HMR, and cross-browser builds.
 
 ## Stack
 
-| What             | How                                                                                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework        | WXT (Manifest V3), React 19, TypeScript                                                                                                                                     |
-| Styling          | Token-based design system in `entrypoints/newtab/style.css` — soft-modern, Inter, indigo accent, light + dark via `prefers-color-scheme` (Tailwind v4 available for new UI) |
-| Storage          | `browser.storage.local`                                                                                                                                                     |
-| Tests            | Vitest (pure logic in `utils/`)                                                                                                                                             |
-| Sound / confetti | Web Audio API + rAF particles (no assets)                                                                                                                                   |
+| What      | How                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework | WXT (Manifest V3), React 19, TypeScript                                                                                                                      |
+| Styling   | Token-based design system in `entrypoints/newtab/style.css` — soft-modern, Inter, light + dark via `prefers-color-scheme` (Tailwind v4 available for new UI) |
+| Storage   | `browser.storage.local` + `storage.sync`                                                                                                                     |
+| Tests     | Vitest (pure logic in `utils/`)                                                                                                                              |
 
 ## Develop
 
@@ -114,7 +111,7 @@ entrypoints/
     index.html · main.tsx · App.tsx · style.css
 components/              # DomainCard, TabChip, SavedForLater, DupeBanner, Toast, icons
 hooks/                  # useTabs (live tab events), useDeferred (saved-for-later)
-utils/                  # tabs, storage, grouping, format, effects, config, types
+utils/                  # tabs, storage, sessions, grouping, format, snapshots, automation, config, types
 __tests__/utils/        # grouping + format unit tests
 tools/generate-icons.mjs
 public/icon/            # icon.svg (bird-on-a-perch) → generated PNGs
