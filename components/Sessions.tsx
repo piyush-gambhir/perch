@@ -53,11 +53,11 @@ export function Sessions({
         <div className="section-line"></div>
         <div className="section-count">{sessions.length}</div>
       </div>
-      <p className="panel-subtitle">Tucked away and closed — restore anytime.</p>
+      <p className="panel-subtitle">Tucked away and closed. Restore anytime.</p>
 
       {sessions.length === 0 && (
         <div className="deferred-empty">
-          Nothing stashed yet. Stash a group to clear your plate — it&apos;ll wait here.
+          Nothing stashed yet. Stash a group to clear your plate, and it&apos;ll wait here.
         </div>
       )}
 

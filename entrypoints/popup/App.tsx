@@ -72,7 +72,7 @@ export function Popup() {
       </div>
 
       <div className="popup-stat">
-        <strong>{count ?? '—'}</strong>
+        <strong>{count ?? '…'}</strong>
         <span>open tab{count !== 1 ? 's' : ''}</span>
       </div>
 

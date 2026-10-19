@@ -349,7 +349,7 @@ function Dashboard() {
       return;
     }
     await saveRoutine('Routine', tabs);
-    showToast('Routine saved — click its name to rename');
+    showToast('Routine saved. Click its name to rename');
   };
 
   const handleOpenRoutine = async (id: string) => {
@@ -398,7 +398,7 @@ function Dashboard() {
 
   const handleCreateWorkspace = async () => {
     const ws = await createWorkspace('Workspace');
-    showToast(`Created ${ws.name} — double-click to rename`);
+    showToast(`Created ${ws.name}. Double-click to rename`);
   };
 
   const handleRenameWorkspace = async (id: string, name: string) => {
@@ -440,7 +440,7 @@ function Dashboard() {
   const handleFocusGroup = async (group: DomainGroup) => {
     const n = await suspendTabsExcept(idsOf(group.tabs));
     showToast(
-      n > 0 ? `Focused — suspended ${n} other tab${n !== 1 ? 's' : ''}` : 'Nothing else to suspend',
+      n > 0 ? `Focused: suspended ${n} other tab${n !== 1 ? 's' : ''}` : 'Nothing else to suspend',
     );
     await refresh();
   };

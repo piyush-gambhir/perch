@@ -15,12 +15,12 @@ const FEATURES = [
   {
     icon: <StashIcon />,
     title: 'Stash, or save a routine',
-    body: 'Stash a group to clear your plate — it closes and waits until you restore it. Save a Routine for the set you reopen every day: opening it never uses it up. And “Save for later” builds a per-page reading list.',
+    body: 'Stash a group to clear your plate: it closes and waits until you restore it. Save a Routine for the set you reopen every day: opening it never uses it up. And “Save for later” builds a per-page reading list.',
   },
   {
     icon: <TabsIcon />,
     title: 'Workspaces',
-    body: 'Switch between named tab contexts (work, research…) — your tabs are saved as you go.',
+    body: 'Switch between named tab contexts (work, research…). Your tabs are saved as you go.',
   },
   {
     icon: <MoonIcon />,
