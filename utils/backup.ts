@@ -9,6 +9,8 @@ import { loadSynced, mutateSynced } from './syncedStore';
 import type { AutomationRule, DeferredTab, Routine, Session, StashedTab, Workspace } from './types';
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
+const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
+type Raw = Record<string, unknown>;
 
 // Only schemes a restore can actually reopen; keeps javascript:/data:/chrome:// out
 // of stashes where a later tabs.create would choke on (or execute) them.
@@ -21,27 +23,58 @@ function isRestorableUrl(url: string): boolean {
   }
 }
 
+/** Optional tags/note metadata, kept only when well-formed. */
+function validMeta(x: Raw): { tags?: string[]; note?: string } {
+  return {
+    ...(Array.isArray(x.tags) ? { tags: x.tags.filter(isStr) } : {}),
+    ...(isStr(x.note) ? { note: x.note } : {}),
+  };
+}
+
 function validTabs(v: unknown): StashedTab[] {
   if (!Array.isArray(v)) return [];
   return v
     .filter(
-      (t): t is StashedTab =>
+      (t): t is Raw & { url: string } =>
         !!t &&
         typeof t === 'object' &&
-        isStr((t as StashedTab).url) &&
-        isRestorableUrl((t as StashedTab).url),
+        isStr((t as Raw).url) &&
+        isRestorableUrl((t as Raw).url as string),
     )
-    .map((t) => ({ url: t.url, title: isStr(t.title) ? t.title : t.url }));
+    .map((t) => ({
+      url: t.url,
+      title: isStr(t.title) ? t.title : t.url,
+      ...(isBool(t.pinned) ? { pinned: t.pinned } : {}),
+      ...(isStr(t.group) ? { group: t.group } : {}),
+      ...validMeta(t),
+    }));
 }
 
-function validNamedSets<T extends { id: string; name: string; tabs: StashedTab[] }>(
+/**
+ * Valid named tab sets (stashes, routines, workspaces), reduced to the fields they
+ * share. Each caller adds its own type-specific fields from `raw`, so nothing
+ * unvalidated is copied into storage.
+ */
+function validNamedSets(
   v: unknown,
-): T[] {
+): { base: Pick<Workspace, 'id' | 'name' | 'tabs' | 'tags' | 'note'>; raw: Raw }[] {
   if (!Array.isArray(v)) return [];
   return v
-    .filter((x) => !!x && typeof x === 'object' && isStr((x as T).id) && isStr((x as T).name))
-    .map((x) => ({ ...(x as T), name: (x as T).name, tabs: validTabs((x as T).tabs) }));
+    .filter((x): x is Raw => !!x && typeof x === 'object' && isStr(x.id) && isStr(x.name))
+    .map((x) => ({
+      base: {
+        id: x.id as string,
+        name: x.name as string,
+        tabs: validTabs(x.tabs),
+        ...validMeta(x),
+      },
+      raw: x,
+    }));
 }
+
+const createdAt = (raw: Raw) => (isStr(raw.createdAt) ? raw.createdAt : new Date().toISOString());
+
+const ACTIONS: AutomationRule['action'][] = ['stash', 'close-duplicates', 'suspend'];
 
 export interface Backup {
   app: 'perch';
@@ -87,23 +120,28 @@ export async function importAll(raw: unknown): Promise<string> {
   const counts: string[] = [];
 
   if (data.sessions !== undefined) {
-    const sessions = validNamedSets<Session>(data.sessions).map((s) => ({
-      ...s,
-      createdAt: isStr(s.createdAt) ? s.createdAt : new Date().toISOString(),
+    const sessions: Session[] = validNamedSets(data.sessions).map(({ base, raw }) => ({
+      ...base,
+      createdAt: createdAt(raw),
+      ...(isBool(raw.auto) ? { auto: raw.auto } : {}),
     }));
     await mutateSynced<Session>('sessions', () => sessions);
     counts.push(`${sessions.length} stashes`);
   }
   if (data.routines !== undefined) {
-    const routines = validNamedSets<Routine>(data.routines).map((r) => ({
-      ...r,
-      createdAt: isStr(r.createdAt) ? r.createdAt : new Date().toISOString(),
+    const routines: Routine[] = validNamedSets(data.routines).map(({ base, raw }) => ({
+      ...base,
+      createdAt: createdAt(raw),
+      // Same HH:MM shape the Routines schedule prompt accepts.
+      ...(isStr(raw.schedule) && /^\d{2}:\d{2}$/.test(raw.schedule)
+        ? { schedule: raw.schedule }
+        : {}),
     }));
     await mutateSynced<Routine>('routines', () => routines);
     counts.push(`${routines.length} routines`);
   }
   if (data.workspaces !== undefined) {
-    const workspaces = validNamedSets<Workspace>(data.workspaces);
+    const workspaces: Workspace[] = validNamedSets(data.workspaces).map(({ base }) => base);
     await mutateSynced<Workspace>('workspaces', () => workspaces);
     counts.push(`${workspaces.length} workspaces`);
   }
@@ -125,6 +163,7 @@ export async function importAll(raw: unknown): Promise<string> {
         completed: t.completed === true,
         dismissed: t.dismissed === true,
         ...(t.completed === true && isStr(t.completedAt) ? { completedAt: t.completedAt } : {}),
+        ...validMeta(t as unknown as Raw),
       }));
     await mutateSynced<DeferredTab>('deferred', () => deferred);
     counts.push(`${deferred.length} saved`);
@@ -133,15 +172,30 @@ export async function importAll(raw: unknown): Promise<string> {
     await saveSettings(data.settings as Partial<Settings>);
   }
   if (data.automationRules !== undefined) {
-    const rules = (Array.isArray(data.automationRules) ? data.automationRules : []).filter(
-      (rule): rule is AutomationRule =>
-        !!rule &&
-        typeof rule === 'object' &&
-        isStr((rule as AutomationRule).id) &&
-        isStr((rule as AutomationRule).name) &&
-        isStr((rule as AutomationRule).hostname) &&
-        ['stash', 'close-duplicates', 'suspend'].includes((rule as AutomationRule).action),
-    );
+    const rules: AutomationRule[] = (
+      Array.isArray(data.automationRules) ? (data.automationRules as unknown[]) : []
+    )
+      .filter(
+        (rule): rule is Raw =>
+          !!rule &&
+          typeof rule === 'object' &&
+          isStr((rule as Raw).id) &&
+          isStr((rule as Raw).name) &&
+          isStr((rule as Raw).hostname) &&
+          ACTIONS.includes((rule as Raw).action as AutomationRule['action']) &&
+          Number.isFinite((rule as Raw).olderThanDays) &&
+          ((rule as Raw).olderThanDays as number) >= 0,
+      )
+      .map((rule) => ({
+        id: rule.id as string,
+        name: rule.name as string,
+        enabled: rule.enabled === true,
+        hostname: rule.hostname as string,
+        olderThanDays: rule.olderThanDays as number,
+        action: rule.action as AutomationRule['action'],
+        // Missing means protect: a rule must opt in to touching pinned tabs.
+        excludePinned: rule.excludePinned !== false,
+      }));
     await mutateSynced<AutomationRule>('automationRules', () => rules);
     counts.push(`${rules.length} rules`);
   }
