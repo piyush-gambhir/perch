@@ -2111,6 +2111,17 @@ footer {
   margin: 0;
 }
 
+/* The dialog already pads its content, and the first section draws the divider. */
+.control-center .settings-head {
+  padding: 0 0 16px;
+  border-bottom: 0;
+}
+
+/* panel-subtitle's negative top margin suits section headers, not a dialog title. */
+.settings-head .panel-subtitle {
+  margin: 2px 0 0;
+}
+
 .control-section {
   padding: 18px 0;
   border-top: 1px solid var(--border);
