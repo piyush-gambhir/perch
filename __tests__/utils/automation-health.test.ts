@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { duplicateIdsToClose, tabsMatchingRule } from '../../utils/automation';
-import { analyzeTabHealth, canonicalUrl } from '../../utils/health';
+import { analyzeTabHealth, stripTrackingParams } from '../../utils/health';
 import type { AutomationRule, TabInfo } from '../../utils/types';
 
 const NOW = Date.parse('2026-07-11T12:00:00Z');
@@ -91,10 +91,23 @@ describe('duplicateIdsToClose', () => {
 });
 
 describe('tab health', () => {
-  it('canonicalizes common tracking parameters without changing useful parameters', () => {
-    expect(canonicalUrl('https://example.com/page?id=4&utm_source=news#top')).toBe(
-      'https://example.com/page?id=4',
+  it('strips tracking parameters without changing useful parameters or the fragment', () => {
+    expect(stripTrackingParams('https://example.com/page?id=4&utm_source=news#top')).toBe(
+      'https://example.com/page?id=4#top',
     );
+  });
+
+  it('keeps a hash route intact when cleaning', () => {
+    expect(stripTrackingParams('https://app.test/?utm_source=email#/document/123')).toBe(
+      'https://app.test/#/document/123',
+    );
+  });
+
+  it('leaves the encoding of the other parameters untouched', () => {
+    expect(stripTrackingParams('https://a.test/s?q=a%20b&flag&gclid=x&utm_medium=y')).toBe(
+      'https://a.test/s?q=a%20b&flag',
+    );
+    expect(stripTrackingParams('https://a.test/plain#x')).toBe('https://a.test/plain#x');
   });
 
   it('finds canonical duplicates, tracking URLs, stale tabs, and discard candidates', () => {
