@@ -28,7 +28,7 @@ HMR, and cross-browser builds.
 **Organize**
 
 - Replaces the new-tab page with a dashboard of every open tab
-- Tabs grouped by domain: Chrome tab groups and the Homepages card come first, then sites by tab count
+- Tabs grouped by domain, with Chrome tab groups and the Homepages card first
 - **Homepages** group pulls landing pages (Gmail inbox, x.com/home, LinkedIn, GitHub, YouTube home) into one card so you can clear them without touching deep links
 - `file://` tabs collected under a **Local Files** group
 - `localhost` tabs show their **port number** so you can tell dev projects apart
