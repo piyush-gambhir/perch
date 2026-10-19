@@ -27,6 +27,35 @@ describe('switchWorkspace', () => {
     expect(fake.tabs.map((tab) => tab.url)).not.toContain('https://old.test/');
   });
 
+  it('keeps tabs that failed to open when switching away again', async () => {
+    const a = await createWorkspace('A');
+    const b = await createWorkspace('B', [
+      { url: 'https://good.test/', title: 'Good' },
+      { url: 'https://bad.test/', title: 'Bad' },
+    ]);
+    await setActiveWorkspaceId(a.id);
+    fake.failUrls.add('https://bad.test/');
+
+    await switchWorkspace(b.id);
+    expect(fake.tabs.map((tab) => tab.url)).toEqual(['https://good.test/']);
+    await switchWorkspace(a.id);
+    expect((await tabsOf(b.id))?.map((tab) => tab.url)).toEqual([
+      'https://good.test/',
+      'https://bad.test/',
+    ]);
+  });
+
+  it('keeps a workspace whose tabs all failed to open', async () => {
+    const a = await createWorkspace('A');
+    const b = await createWorkspace('B', [{ url: 'https://bad.test/', title: 'Bad' }]);
+    await setActiveWorkspaceId(a.id);
+    fake.failUrls.add('https://bad.test/');
+
+    await switchWorkspace(b.id);
+    await switchWorkspace(a.id);
+    expect(await tabsOf(b.id)).toEqual([{ url: 'https://bad.test/', title: 'Bad' }]);
+  });
+
   it('does not create an empty recovery workspace when nothing was open', async () => {
     const b = await createWorkspace('B');
     await setActiveWorkspaceId('deleted-elsewhere');
