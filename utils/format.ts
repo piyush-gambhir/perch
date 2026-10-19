@@ -106,7 +106,7 @@ export function smartTitle(title: string, url: string): string {
       if (rest[0] === 'issues' && rest[1]) return `${owner}/${repo} Issue #${rest[1]}`;
       if (rest[0] === 'pull' && rest[1]) return `${owner}/${repo} PR #${rest[1]}`;
       if (rest[0] === 'blob' || rest[0] === 'tree')
-        return `${owner}/${repo} — ${rest.slice(2).join('/')}`;
+        return `${owner}/${repo} · ${rest.slice(2).join('/')}`;
       if (titleIsUrl) return `${owner}/${repo}`;
     }
   }
@@ -167,9 +167,30 @@ export function getDateDisplay(now: Date = new Date()): string {
   });
 }
 
-/** Google's favicon service URL for a hostname. */
-export function faviconUrl(hostname: string): string {
-  return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+/** Extract a clean hostname from a URL, stripping a leading "www." (empty on failure). */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Pick the src for a favicon <img> without any network request. On Chrome that is the
+ * extension's `_favicon` endpoint, which serves the browser's own favicon cache. Firefox
+ * has no such endpoint, so there only an inline data: favicon qualifies; a remote
+ * favIconUrl is never loaded. Returns '' when nothing qualifies, and the caller shows
+ * its fallback instead. `extensionUrl` is runtime.getURL, passed in to keep this pure.
+ */
+export function faviconSrc(
+  pageUrl: string,
+  favIconUrl: string | undefined,
+  target: { firefox: boolean; extensionUrl: (path: string) => string },
+): string {
+  if (target.firefox) return favIconUrl?.startsWith('data:') ? favIconUrl : '';
+  if (!pageUrl) return '';
+  return target.extensionUrl(`/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=32`);
 }
 
 /** Only allow safe link schemes; blocks javascript:/data: and other injection vectors. */

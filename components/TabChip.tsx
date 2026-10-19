@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { setDragTab } from '../utils/dnd';
-import { displayTitle, faviconUrl } from '../utils/format';
+import { displayTitle } from '../utils/format';
+import { faviconFor } from '../utils/tabs';
 import type { TabInfo } from '../utils/types';
 import { BookmarkIcon, CloseIcon } from './icons';
 
@@ -40,6 +41,7 @@ export function TabChip({
   } catch {
     /* ignore */
   }
+  const favicon = faviconFor(tab.url, tab.favIconUrl);
 
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -78,10 +80,10 @@ export function TabChip({
           onChange={() => onToggleSelect(tab.id as number)}
         />
       )}
-      {hostname && (
+      {hostname && favicon && (
         <img
           className="chip-favicon"
-          src={faviconUrl(hostname)}
+          src={favicon}
           alt=""
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).style.display = 'none';

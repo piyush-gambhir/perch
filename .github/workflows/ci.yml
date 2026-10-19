@@ -16,7 +16,7 @@ concurrency:
 # (ubuntu-latest is 4 vCPU, 16 GB). The three checks run as parallel jobs so
 # the wall clock is the slowest one, not the sum.
 jobs:
-  check:
+  tasks:
     name: ${{ matrix.task }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
@@ -44,3 +44,14 @@ jobs:
       - name: Build
         if: matrix.task == 'build'
         run: pnpm exec wxt build
+
+  # The main branch ruleset requires a status check named "check". It reports the
+  # matrix result, and runs even when a task fails, because GitHub counts a
+  # skipped required check as passing.
+  check:
+    if: always()
+    needs: tasks
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.tasks.result }}" = success

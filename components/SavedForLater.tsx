@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { getDragTab, type DragTab } from '../utils/dnd';
-import { faviconUrl, safeHref, timeAgo } from '../utils/format';
+import { hostOf, safeHref, timeAgo } from '../utils/format';
+import { faviconFor } from '../utils/tabs';
 import type { DeferredTab } from '../utils/types';
 import { ChevronIcon, CloseIcon } from './icons';
 
@@ -12,14 +13,7 @@ interface SavedForLaterProps {
   onCheck: (id: string) => void;
   onDismiss: (id: string) => void;
   onDropSave: (tab: DragTab) => void;
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
+  onMeta: (id: string, tags: string[], note: string) => void;
 }
 
 export function SavedForLater({
@@ -28,10 +22,14 @@ export function SavedForLater({
   onCheck,
   onDismiss,
   onDropSave,
+  onMeta,
 }: SavedForLaterProps) {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [dropOver, setDropOver] = useState(false);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [tagsDraft, setTagsDraft] = useState('');
+  const [noteDraft, setNoteDraft] = useState('');
 
   const filteredArchive = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -65,11 +63,13 @@ export function SavedForLater({
           {active.length > 0 ? `${active.length} item${active.length !== 1 ? 's' : ''}` : ''}
         </div>
       </div>
+      <p className="panel-subtitle">Your reading list.</p>
 
       {active.length > 0 ? (
         <div className="deferred-list">
           {active.map((item) => {
             const domain = hostOf(item.url);
+            const favicon = faviconFor(item.url);
             return (
               <div key={item.id} className="deferred-item">
                 <input
@@ -85,14 +85,16 @@ export function SavedForLater({
                     className="deferred-title"
                     title={item.title}
                   >
-                    <img
-                      src={faviconUrl(domain)}
-                      alt=""
-                      style={{ width: 14, height: 14, verticalAlign: -2, marginRight: 4 }}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
+                    {favicon && (
+                      <img
+                        src={favicon}
+                        alt=""
+                        style={{ width: 14, height: 14, verticalAlign: -2, marginRight: 4 }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
                     {item.title || item.url}
                   </a>
                   <div className="deferred-meta">
@@ -100,14 +102,58 @@ export function SavedForLater({
                     <span>{timeAgo(item.savedAt)}</span>
                   </div>
                 </div>
-                <button
-                  className="deferred-dismiss"
-                  title="Dismiss"
-                  aria-label={`Dismiss ${item.title || item.url}`}
-                  onClick={() => onDismiss(item.id)}
-                >
-                  <CloseIcon />
-                </button>
+                <div className="row-actions">
+                  <button
+                    className="deferred-dismiss"
+                    title="Tags and note"
+                    aria-label={`Edit tags and note for ${item.title || item.url}`}
+                    onClick={() => {
+                      setDetailsId(detailsId === item.id ? null : item.id);
+                      setTagsDraft((item.tags ?? []).join(', '));
+                      setNoteDraft(item.note ?? '');
+                    }}
+                  >
+                    #
+                  </button>
+                  <button
+                    className="deferred-dismiss"
+                    title="Dismiss"
+                    aria-label={`Dismiss ${item.title || item.url}`}
+                    onClick={() => onDismiss(item.id)}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+                {detailsId === item.id && (
+                  <div className="session-details deferred-details">
+                    <input
+                      value={tagsDraft}
+                      onChange={(event) => setTagsDraft(event.target.value)}
+                      placeholder="Tags, comma separated"
+                    />
+                    <textarea
+                      value={noteDraft}
+                      onChange={(event) => setNoteDraft(event.target.value)}
+                      placeholder="Add a note"
+                    />
+                    <button
+                      className="action-btn"
+                      onClick={() => {
+                        onMeta(
+                          item.id,
+                          tagsDraft
+                            .split(',')
+                            .map((tag) => tag.trim())
+                            .filter(Boolean),
+                          noteDraft.trim(),
+                        );
+                        setDetailsId(null);
+                      }}
+                    >
+                      Save details
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -153,6 +199,14 @@ export function SavedForLater({
                       <span className="archive-item-date">
                         {timeAgo(item.completedAt || item.savedAt)}
                       </span>
+                      <button
+                        className="deferred-dismiss archive-dismiss"
+                        title="Delete"
+                        aria-label={`Delete ${item.title || item.url}`}
+                        onClick={() => onDismiss(item.id)}
+                      >
+                        <CloseIcon />
+                      </button>
                     </div>
                   ))
                 ) : (

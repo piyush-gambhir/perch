@@ -4,13 +4,31 @@
  */
 
 import { browser } from 'wxt/browser';
+import { faviconSrc } from './format';
 import type { NativeGroup, StashedTab, TabInfo } from './types';
 
-const INTERNAL_PREFIXES = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'brave://'];
+const INTERNAL_PREFIXES = [
+  'chrome://',
+  'chrome-extension://',
+  'moz-extension://',
+  'about:',
+  'edge://',
+  'brave://',
+];
 
 /** True for browser-internal / extension pages we never want to show or count. */
 export function isInternalUrl(url: string): boolean {
   return INTERNAL_PREFIXES.some((p) => url.startsWith(p));
+}
+
+/** Local-only favicon src for a page (see faviconSrc); '' means show the fallback. */
+export function faviconFor(pageUrl: string, favIconUrl?: string): string {
+  return faviconSrc(pageUrl, favIconUrl, {
+    firefox: import.meta.env.BROWSER === 'firefox',
+    // `_favicon` is a browser-provided path, not a file in the build, so it is not
+    // part of WXT's typed PublicPath union.
+    extensionUrl: (path) => (browser.runtime.getURL as (path: string) => string)(path),
+  });
 }
 
 /** The URL of Perch's own new-tab page. */
@@ -27,17 +45,24 @@ export async function fetchOpenTabs(): Promise<TabInfo[]> {
   try {
     const ntUrl = newtabUrl();
     const tabs = await browser.tabs.query({});
-    return tabs.map((t) => ({
-      id: t.id,
-      url: t.url ?? '',
-      title: t.title ?? '',
-      windowId: t.windowId,
-      active: t.active ?? false,
-      isPerchTab: t.url === ntUrl || t.url === 'chrome://newtab/',
-      lastAccessed: (t as { lastAccessed?: number }).lastAccessed,
-      discarded: t.discarded ?? false,
-      groupId: (t as { groupId?: number }).groupId ?? -1,
-    }));
+    // Incognito tabs never enter Perch: showing or persisting them would leak
+    // private URLs into (synced) storage.
+    return tabs
+      .filter((t) => !t.incognito)
+      .map((t) => ({
+        id: t.id,
+        url: t.url ?? '',
+        title: t.title ?? '',
+        windowId: t.windowId,
+        active: t.active ?? false,
+        isPerchTab: t.url === ntUrl || t.url === 'chrome://newtab/',
+        lastAccessed: (t as { lastAccessed?: number }).lastAccessed,
+        discarded: t.discarded ?? false,
+        groupId: (t as { groupId?: number }).groupId ?? -1,
+        pinned: t.pinned ?? false,
+        audible: t.audible ?? false,
+        favIconUrl: t.favIconUrl,
+      }));
   } catch {
     return [];
   }
@@ -133,13 +158,25 @@ export async function ungroupTabsInBrowser(groupId: number): Promise<void> {
 /** Count real web tabs (skips browser internals). Used by the badge. */
 export async function countRealTabs(): Promise<number> {
   const tabs = await browser.tabs.query({});
-  return tabs.filter((t) => !isInternalUrl(t.url ?? '')).length;
+  return tabs.filter((t) => !t.incognito && !isInternalUrl(t.url ?? '')).length;
 }
 
-/** Close the exact tabs with these ids. The precise, safe way to close a card's tabs. */
+/**
+ * Close the exact tabs with these ids. The precise, safe way to close a card's tabs.
+ * Resilient to stale ids: `tabs.remove([ids])` rejects wholesale if any id is already
+ * gone (e.g. the user closed one in the tab bar moments ago), so on failure we fall
+ * back to removing one-by-one and skip the dead ones.
+ */
 export async function closeTabsByIds(ids: (number | undefined)[]): Promise<void> {
   const real = ids.filter((id): id is number => id !== undefined);
-  if (real.length > 0) await browser.tabs.remove(real);
+  if (real.length === 0) return;
+  try {
+    await browser.tabs.remove(real);
+  } catch {
+    for (const id of real) {
+      await browser.tabs.remove(id).catch(() => {});
+    }
+  }
 }
 
 /** Close a single tab by exact URL. Returns the closed tab (for undo). */
@@ -159,18 +196,42 @@ export async function openUrl(url: string): Promise<void> {
   await browser.tabs.create({ url, active: true });
 }
 
-/** Open many URLs as background tabs. Resilient: one bad URL won't abort the rest. */
-export async function openUrls(urls: string[], windowId?: number): Promise<void> {
-  for (const url of urls) {
-    if (!url) continue;
+/**
+ * Restore metadata-rich tabs, optionally skipping URLs that are already open.
+ * `failed` lists the tabs whose URL never opened, so callers can keep those records.
+ */
+export async function openStashedTabs(
+  tabs: StashedTab[],
+  options: { windowId?: number; skipOpen?: boolean } = {},
+): Promise<{ opened: number; skipped: number; failed: StashedTab[] }> {
+  const existing = options.skipOpen
+    ? new Set(
+        (await browser.tabs.query({})).map((tab) => tab.url).filter((url): url is string => !!url),
+      )
+    : new Set<string>();
+  let opened = 0;
+  let skipped = 0;
+  const failed: StashedTab[] = [];
+  for (const tab of tabs) {
+    if (!tab.url || existing.has(tab.url)) {
+      skipped += 1;
+      continue;
+    }
     try {
-      await browser.tabs.create(
-        windowId !== undefined ? { url, active: false, windowId } : { url, active: false },
-      );
+      await browser.tabs.create({
+        url: tab.url,
+        active: false,
+        pinned: tab.pinned,
+        ...(options.windowId !== undefined ? { windowId: options.windowId } : {}),
+      });
+      existing.add(tab.url);
+      opened += 1;
     } catch {
-      /* skip an unopenable URL */
+      failed.push(tab);
     }
   }
+  // A later copy of the same URL may have opened after an earlier one failed.
+  return { opened, skipped, failed: failed.filter((tab) => !existing.has(tab.url)) };
 }
 
 /** Focus the tab with the given URL (exact, then hostname fallback), across windows. */
@@ -196,27 +257,33 @@ export async function focusTab(url: string): Promise<void> {
   }
   if (matches.length === 0) return;
 
-  const match = matches.find((t) => t.windowId !== currentWindow.id) || matches[0];
+  // Prefer a match in the current window — jumping windows is the disruptive fallback.
+  const match = matches.find((t) => t.windowId === currentWindow.id) || matches[0];
   if (!match) return;
   if (match.id !== undefined) await browser.tabs.update(match.id, { active: true });
   if (match.windowId !== undefined) await browser.windows.update(match.windowId, { focused: true });
 }
 
 /** Close duplicate tabs. keepOne=true keeps one copy of each URL. */
+/**
+ * Close extra copies of each URL. Not recorded for undo: a copy always stays open,
+ * and restore skips URLs that are already open anyway.
+ */
 export async function closeDuplicateTabs(urls: string[], keepOne = true): Promise<void> {
   const allTabs = await browser.tabs.query({});
   const toClose: number[] = [];
 
-  for (const url of urls) {
-    const matching = allTabs.filter((t) => t.url === url);
+  for (const url of new Set(urls)) {
+    const matching = allTabs.filter((t) => t.url === url && !t.incognito);
     if (keepOne) {
-      const keep = matching.find((t) => t.active) || matching[0];
+      // A pinned tab is an explicit keep signal; otherwise preserve the active copy.
+      const keep = matching.find((t) => t.pinned) || matching.find((t) => t.active) || matching[0];
       if (!keep) continue;
       for (const tab of matching) {
-        if (tab.id !== undefined && tab.id !== keep.id) toClose.push(tab.id);
+        if (tab.id !== undefined && tab.id !== keep?.id && !tab.pinned) toClose.push(tab.id);
       }
     } else {
-      for (const tab of matching) if (tab.id !== undefined) toClose.push(tab.id);
+      for (const tab of matching) if (tab.id !== undefined && !tab.pinned) toClose.push(tab.id);
     }
   }
 
@@ -248,10 +315,17 @@ export async function closeTabOutDupes(): Promise<void> {
 /** Rough per-tab memory estimate (MB) for the "freed ~X" readout. */
 export const APPROX_MB_PER_TAB = 80;
 
-/** Tabs eligible to discard: real, not active, not already discarded. */
+/** Tabs eligible to discard: real, not active/pinned/audible, not already discarded. */
 export function discardableCount(tabs: TabInfo[]): number {
-  return tabs.filter((t) => !t.active && !t.discarded && !t.isPerchTab && !isInternalUrl(t.url))
-    .length;
+  return tabs.filter(
+    (t) =>
+      !t.active &&
+      !t.discarded &&
+      !t.pinned &&
+      !t.audible &&
+      !t.isPerchTab &&
+      !isInternalUrl(t.url),
+  ).length;
 }
 
 /** Discard all inactive, non-discarded real tabs. Returns how many were suspended. */
@@ -265,13 +339,21 @@ export async function suspendTabsExcept(keepIds: (number | undefined)[]): Promis
   return suspendWhere((id) => !keep.has(id));
 }
 
+/** Suspend exactly these tabs (an automation rule's matches), with the usual skips. */
+export async function suspendTabsByIds(ids: (number | undefined)[]): Promise<number> {
+  const only = new Set(ids.filter((id): id is number => id !== undefined));
+  return suspendWhere((id) => only.has(id));
+}
+
 async function suspendWhere(predicate: (id: number) => boolean): Promise<number> {
   const tabs = await browser.tabs.query({});
   let count = 0;
   for (const t of tabs) {
     const url = t.url ?? '';
-    if (t.active || t.discarded || isInternalUrl(url) || t.id === undefined) continue;
-    if (!predicate(t.id)) continue;
+    // Skip pinned and audible tabs — Chrome's own memory saver excludes both, and
+    // discarding a tab that's playing audio/a meeting is user-hostile.
+    if (t.active || t.discarded || t.pinned || t.audible || isInternalUrl(url)) continue;
+    if (t.id === undefined || !predicate(t.id)) continue;
     try {
       await browser.tabs.discard(t.id);
       count += 1;

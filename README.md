@@ -1,8 +1,7 @@
 # Perch
 
 **A calm home for your tabs.** A new-tab dashboard that groups your open tabs by
-domain and lets you close them with style (swoosh + confetti). 100% local — no
-server, no account.
+domain and makes closing them safe. No server, no account, no analytics.
 
 Built with [WXT](https://wxt.dev) + React + TypeScript: typed logic, unit tests,
 HMR, and cross-browser builds.
@@ -15,15 +14,21 @@ HMR, and cross-browser builds.
 - **Undo close** — a recently-closed stack reopens what you just closed
 - **Drag & drop** — drag a tab onto a stash, the new-stash dropzone, or Saved-for-later; drag stashes to reorder; rename a stash inline
 - **⌘K command palette** — fuzzy search across open tabs, saved tabs, and stashes; jump / open / restore by keyboard (`/` also opens it)
+- **Search operators** — narrow the palette with `open:`, `saved:`, `stash:`, `workspace:`, or `older:7d`; tags and notes are searchable too
+- **Address-bar commands** — type `perch` in the omnibox, then search or run `stash`, `suspend`, or `workspace <name>`
 - **Native tab groups** — reflects Chrome's tab groups (color + title); "Group in browser" / "Ungroup" from any card
 - **Memory saver** — suspend inactive tabs to free RAM, with an estimated "~X freed"
 - **Proactive cleanup** — surfaces tabs untouched for 7+ days to stash or close in bulk
 - **Cross-device sync** — settings, stashes, and saved tabs follow you via your browser profile (quota-safe, no login)
+- **Recovery timeline** — rolling snapshots every 15 minutes, plus safety snapshots before workspace switches; restore only missing tabs
+- **Control center** — health checks for duplicates, stale tabs, tracking URLs, and memory-saving candidates
+- **Automation rules** — stash, deduplicate, or suspend matching domains by age, with pinned-tab protection
+- **Scheduled routines** — optionally open a routine at a local daily time
 
 **Organize**
 
 - Replaces the new-tab page with a dashboard of every open tab
-- Tabs grouped by domain, sorted by tab count (busiest first)
+- Tabs grouped by domain, with Chrome tab groups and the Homepages card first
 - **Homepages** group pulls landing pages (Gmail inbox, x.com/home, LinkedIn, GitHub, YouTube home) into one card so you can clear them without touching deep links
 - `file://` tabs collected under a **Local Files** group
 - `localhost` tabs show their **port number** so you can tell dev projects apart
@@ -34,7 +39,7 @@ HMR, and cross-browser builds.
 - Friendly domain names (`github.com` → GitHub, `mail.google.com` → Gmail, …)
 - Cleaned-up titles: strips notification counts `(3)`, inline counts, email addresses, and `· X` suffixes
 - Smart titles synthesized from the URL for GitHub repos/PRs/issues, X posts, Reddit threads, YouTube videos
-- Per-site favicons; live toolbar **badge** with the open-tab count, color-coded green → amber → red as it grows
+- Per-site favicons from Chrome's own cache (never fetched from the internet); live toolbar **badge** with the open-tab count, color-coded green → amber → red as it grows
 
 **Act**
 
@@ -50,14 +55,15 @@ HMR, and cross-browser builds.
 - Bookmark a tab to a checklist before closing it
 - Check items off into a collapsible **archive**; **search** the archive; dismiss anything
 - Persists in `browser.storage.local` across restarts
+- Add searchable tags and notes to saved tabs and stashes
 
 **Feel**
 
-- Soft-modern UI, Inter font, indigo accent, **automatic light/dark**, borderless cards, responsive layout
-- Satisfying **swoosh** sound + **confetti** burst on close (synthesized, no asset files)
+- Soft-modern UI, bundled Inter font, **automatic light/dark** (or a fixed theme in Settings), borderless cards, responsive layout
 - Time-of-day greeting, toasts, and an "inbox zero" empty state
 - **Live-updating** — the dashboard reflects tab changes in real time
-- **100% local** — no server, no account, and the UI font is bundled with the extension
+- **No server** and no account: data stays in your browser, and only Chrome Sync (if you use it) carries it between your own devices. See [PRIVACY.md](PRIVACY.md)
+- **Portable backups** — export plain JSON or an AES-256-GCM encrypted backup protected by your passphrase
 
 **Under the hood**
 
@@ -66,13 +72,12 @@ HMR, and cross-browser builds.
 
 ## Stack
 
-| What             | How                                                                                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework        | WXT (Manifest V3), React 19, TypeScript                                                                                                                                     |
-| Styling          | Token-based design system in `entrypoints/newtab/style.css` — soft-modern, Inter, indigo accent, light + dark via `prefers-color-scheme` (Tailwind v4 available for new UI) |
-| Storage          | `browser.storage.local`                                                                                                                                                     |
-| Tests            | Vitest (pure logic in `utils/`)                                                                                                                                             |
-| Sound / confetti | Web Audio API + rAF particles (no assets)                                                                                                                                   |
+| What      | How                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework | WXT (Manifest V3), React 19, TypeScript                                                                                                                      |
+| Styling   | Token-based design system in `entrypoints/newtab/style.css` — soft-modern, Inter, light + dark via `prefers-color-scheme` (Tailwind v4 available for new UI) |
+| Storage   | `browser.storage.local` + `storage.sync`                                                                                                                     |
+| Tests     | Vitest (pure logic in `utils/`)                                                                                                                              |
 
 ## Develop
 
@@ -81,6 +86,7 @@ pnpm install
 pnpm dev          # launches a dev browser with the extension loaded
 pnpm test         # typecheck + unit tests
 pnpm build        # production build → .output/chrome-mv3
+pnpm build:local  # refresh ~/chrome-extensions/perch; loaded local builds auto-reload
 pnpm zip          # packaged zip for the store
 pnpm build:firefox / pnpm dev:firefox
 ```
@@ -105,7 +111,7 @@ entrypoints/
     index.html · main.tsx · App.tsx · style.css
 components/              # DomainCard, TabChip, SavedForLater, DupeBanner, Toast, icons
 hooks/                  # useTabs (live tab events), useDeferred (saved-for-later)
-utils/                  # tabs, storage, grouping, format, effects, config, types
+utils/                  # tabs, storage, sessions, grouping, format, snapshots, automation, config, types
 __tests__/utils/        # grouping + format unit tests
 tools/generate-icons.mjs
 public/icon/            # icon.svg (bird-on-a-perch) → generated PNGs

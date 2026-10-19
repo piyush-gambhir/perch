@@ -193,6 +193,38 @@ export function NewWindowIcon({ className }: IconProps) {
   );
 }
 
+export function PencilIcon({ className }: IconProps) {
+  return (
+    <svg {...base} strokeWidth={2} className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
+      />
+    </svg>
+  );
+}
+
+/** Perch's own bird-on-a-branch mark, inlined from public/icon/icon.svg. */
+export function PerchMark({ className }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 128 128"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="24" y="90" width="80" height="9" rx="4.5" />
+      <rect x="55" y="80" width="4" height="12" rx="2" />
+      <rect x="67" y="80" width="4" height="12" rx="2" />
+      <circle cx="58" cy="64" r="17" />
+      <circle cx="77" cy="53" r="8.5" />
+      <polygon points="85,48 95,54 85,59" opacity="0.6" />
+    </svg>
+  );
+}
+
 export function GearIcon({ className }: IconProps) {
   return (
     <svg {...base} strokeWidth={2} className={className}>

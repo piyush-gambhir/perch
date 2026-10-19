@@ -16,7 +16,8 @@ export function useHistory(): UseHistory {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const initial = setTimeout(refresh, 0);
+    return () => clearTimeout(initial);
   }, [refresh]);
 
   return { history, refresh };

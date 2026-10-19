@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { friendlyDomain } from '../utils/format';
 import { duplicateInfo, uniqueByUrl } from '../utils/grouping';
+import { closableTabs } from '../utils/sessions';
 import { tabGroupColor } from '../utils/tabs';
 import type { DomainGroup } from '../utils/types';
 import { LANDING_PAGES_KEY } from '../utils/types';
@@ -47,6 +48,8 @@ export function DomainCard({
 
   const tabs = group.tabs || [];
   const tabCount = tabs.length;
+  // Close and Stash leave pinned tabs open, so they count and act on the rest only.
+  const closableCount = closableTabs(tabs).length;
   const isLanding = group.domain === LANDING_PAGES_KEY;
   const isNative = group.groupId !== undefined && group.groupId >= 0;
   const isCustom = !!group.label && !isNative;
@@ -60,6 +63,11 @@ export function DomainCard({
   const title = isLanding ? 'Homepages' : group.label || friendlyDomain(group.domain);
 
   const handleCloseGroup = () => {
+    // Only animate the card away when nothing (no pinned tab) will be left on it.
+    if (closableCount < tabCount) {
+      onCloseGroup(group);
+      return;
+    }
     setClosing(true);
     setTimeout(() => onCloseGroup(group), 300);
   };
@@ -117,14 +125,16 @@ export function DomainCard({
         </div>
 
         <div className="actions">
-          <button
-            className="action-btn"
-            onClick={() => onStashGroup(group)}
-            title="Save these tabs and close them"
-          >
-            <StashIcon />
-            Stash
-          </button>
+          {closableCount > 0 && (
+            <button
+              className="action-btn"
+              onClick={() => onStashGroup(group)}
+              title="Save these tabs and close them"
+            >
+              <StashIcon />
+              Stash
+            </button>
+          )}
           <button
             className="action-btn"
             onClick={() => onFocusGroup(group)}
@@ -132,10 +142,12 @@ export function DomainCard({
           >
             Focus
           </button>
-          <button className="action-btn close-tabs" onClick={handleCloseGroup}>
-            <CloseIcon />
-            Close {tabCount}
-          </button>
+          {closableCount > 0 && (
+            <button className="action-btn close-tabs" onClick={handleCloseGroup}>
+              <CloseIcon />
+              Close {closableCount}
+            </button>
+          )}
           {hasDupes && (
             <button className="action-btn" onClick={handleDedup}>
               Close {totalExtras} duplicate{totalExtras !== 1 ? 's' : ''}

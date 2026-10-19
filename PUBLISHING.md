@@ -1,80 +1,59 @@
 # Publishing Perch
 
-Perch ships to the Chrome Web Store as a **private (trusted-testers)** item, published
-automatically by GitHub Actions (`.github/workflows/publish.yml`).
+Perch ships to the Chrome Web Store as an **Unlisted** item: anyone with the link can
+install it, and it does not appear in store search. After the first submission, tagged
+releases are published by GitHub Actions (`.github/workflows/publish.yml`).
 
 ---
 
-## Test directly right now (no store, instant)
+## Try it without the store
 
-1. `pnpm zip` (or `pnpm build`)
-2. Chrome → `chrome://extensions` → enable **Developer mode** (top-right)
-3. **Load unpacked** → select `.output/chrome-mv3`
-4. Open a new tab. Reload the extension after each `pnpm build` to pick up changes.
+1. `pnpm build`
+2. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked**
+3. Select `.output/chrome-mv3` and open a new tab. Reload the extension after each build.
 
-This is the fastest loop and exercises the full feature set. The store path below is for
-installing on other machines / sharing with testers.
-
----
-
-## One-time setup (only you can do these)
-
-### 1. Developer account ($5, once)
-Register at the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole)
-and pay the one-time $5 fee.
-
-### 2. Create the item once, by hand (to get the Extension ID)
-The Web Store API can only **update** an existing item, not create a new one — so the
-very first upload is manual:
-
-1. Dashboard → **Add new item** → upload `.output/perch-extension-<version>-chrome.zip`.
-2. Fill the listing from [`store/LISTING.md`](store/LISTING.md); add the screenshots in
-   [`store/screenshots/`](store/screenshots) and the promo tile `store/promo-tile.png`.
-3. Host [`PRIVACY.md`](PRIVACY.md) somewhere public (e.g. piyushgambhir.com/perch-privacy)
-   and paste the URL into the **Privacy practices** tab; paste the permission
-   justifications from `store/LISTING.md`.
-4. **Visibility → Private**, and under **Trusted testers** add each tester's Google email.
-5. Submit. Once it's reviewed, copy the **Extension ID** (the long id in the item's URL).
-
-### 3. API credentials (for automated updates)
-Follow Google's flow (≈5 min):
-[How to generate Chrome Web Store API keys](https://github.com/fregante/chrome-webstore-upload/blob/main/How%20to%20generate%20Google%20API%20keys.md).
-In short:
-1. [Google Cloud Console](https://console.cloud.google.com) → new project → **enable the
-   "Chrome Web Store API"**.
-2. OAuth consent screen (External, add yourself as a test user) → create **OAuth client ID**
-   of type **Desktop app** → note the **Client ID** and **Client secret**.
-3. Generate a **refresh token**:
-   `npx chrome-webstore-upload-keys` and follow the prompts (it opens the consent flow and
-   prints the refresh token).
-
-### 4. Add GitHub secrets
-Repo → Settings → Secrets and variables → Actions → add:
-
-| Secret | Value |
-|--------|-------|
-| `CWS_EXTENSION_ID` | the Extension ID from step 2 |
-| `CWS_CLIENT_ID` | OAuth client id |
-| `CWS_CLIENT_SECRET` | OAuth client secret |
-| `CWS_REFRESH_TOKEN` | refresh token from step 3 |
+`pnpm build:local` copies the build to `~/chrome-extensions/perch` (or
+`$CHROME_EXTENSIONS_DIR/perch`); a copy loaded from there reloads itself after each run.
 
 ---
 
-## Shipping an update (after setup)
+## First submission (once, in the dashboard)
 
-1. Bump the version in `package.json` (the manifest version derives from it):
-   `npm version patch` (or edit `"version"`).
-2. Commit, then either:
-   - **Tag-triggered:** `git tag v<version> && git push --tags` → the workflow builds,
-     tests, uploads, and **publishes to trusted testers** automatically; or
-   - **Manual:** GitHub → Actions → **Publish to Chrome Web Store** → *Run workflow*
-     (choose `trustedTesters` or `default`).
-3. Or publish from your machine (with the four values exported as `EXTENSION_ID`,
-   `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`): `pnpm release:store`.
+The Web Store API can update an item but cannot create one, and Google requires the
+store listing and privacy tabs to be filled in by hand before the first publish.
 
-Testers install/update from the item's store URL while signed in with an allow-listed
-email. Going public later = flip Visibility to **Public** and run the workflow with
-`target: default`.
+1. `pnpm zip`, then in the [developer dashboard](https://chrome.google.com/webstore/devconsole)
+   choose **Add new item** and upload `.output/perch-extension-<version>-chrome.zip`.
+2. Fill the listing, privacy and distribution tabs from [`store/LISTING.md`](store/LISTING.md).
+   The privacy policy URL is this repository's [`PRIVACY.md`](PRIVACY.md).
+3. Set **Visibility → Unlisted** and submit for review.
+4. Copy the item ID from the dashboard URL and set it as the repository variable
+   `CHROME_EXTENSION_ID`.
 
-> Every store submission needs a **higher version** than the last — always bump
-> `package.json` before releasing, or the upload is rejected.
+## How CI authenticates
+
+The workflow uses the Chrome Web Store API v2 (v1.1, with OAuth client IDs, secrets and
+refresh tokens, shut down on 2026-10-15). Nothing secret is stored in GitHub: the run's
+OIDC token is exchanged through Workload Identity Federation for the `cws-publisher`
+service account in the Google Cloud project `piyush-cws-publishing`, and that account is
+linked to the publisher under **Account** in the developer dashboard.
+
+Repository variables (Settings → Secrets and variables → Actions → Variables):
+
+| Variable                         | Value                                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `CHROME_EXTENSION_ID`            | the item ID from the first submission                                                  |
+| `CHROME_PUBLISHER_ID`            | publisher ID from the dashboard URL (`/devconsole/<publisher-id>`)                     |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/122613507304/locations/global/workloadIdentityPools/github/providers/github` |
+| `GCP_SERVICE_ACCOUNT`            | `cws-publisher@piyush-cws-publishing.iam.gserviceaccount.com`                          |
+
+Check access without uploading: Actions → **Publish to Chrome Web Store** → Run workflow
+with **dry-run** ticked.
+
+## Shipping an update
+
+1. Bump `"version"` in `package.json` (the manifest takes its version from there). Every
+   submission needs a higher version than the last.
+2. Commit, then push a matching tag: `git tag v<version> && git push origin v<version>`.
+3. The workflow typechecks, tests, zips, and submits the package for review. It goes live
+   for users once Google's review clears; check the dashboard for the result.

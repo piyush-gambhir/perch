@@ -46,9 +46,12 @@ export function useTabs(): UseTabs {
   const [tabs, setTabs] = useState<TabInfo[]>([]);
   const [nativeGroups, setNativeGroups] = useState<NativeGroup[]>([]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestId = useRef(0);
 
   const refresh = useCallback(async () => {
+    const currentRequest = (requestId.current += 1);
     const [t, g] = await Promise.all([fetchOpenTabs(), fetchTabGroups()]);
+    if (currentRequest !== requestId.current) return;
     setTabs(t);
     setNativeGroups(g);
   }, []);

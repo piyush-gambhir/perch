@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { timeAgo } from '../utils/format';
 import type { Routine } from '../utils/types';
-import { ArrowRightIcon, ClockIcon, NewWindowIcon, PlusIcon, TrashIcon } from './icons';
+import { ArrowRightIcon, ClockIcon, NewWindowIcon, PencilIcon, PlusIcon, TrashIcon } from './icons';
 
 interface RoutinesProps {
   routines: Routine[];
@@ -13,6 +13,7 @@ interface RoutinesProps {
   onOpenNewWindow: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onSchedule: (id: string, schedule?: string) => void;
 }
 
 export function Routines({
@@ -23,6 +24,7 @@ export function Routines({
   onOpenNewWindow,
   onRename,
   onDelete,
+  onSchedule,
 }: RoutinesProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -30,6 +32,11 @@ export function Routines({
   const commit = (id: string) => {
     if (draft.trim()) onRename(id, draft.trim());
     setEditingId(null);
+  };
+
+  const startRename = (id: string, name: string) => {
+    setEditingId(id);
+    setDraft(name);
   };
 
   if (routines.length === 0 && !canCreate) return null;
@@ -48,6 +55,7 @@ export function Routines({
           <PlusIcon />
         </button>
       </div>
+      <p className="panel-subtitle">Reusable sets: opening never uses them up.</p>
 
       {routines.length === 0 ? (
         <div className="deferred-empty">Save your open tabs as a routine to reopen anytime.</div>
@@ -72,15 +80,22 @@ export function Routines({
                     }}
                   />
                 ) : (
-                  <div
-                    className="session-name"
-                    title="Click to rename"
-                    onClick={() => {
-                      setEditingId(r.id);
-                      setDraft(r.name);
-                    }}
-                  >
-                    {r.name}
+                  <div className="session-name-row">
+                    <div
+                      className="session-name"
+                      title="Click to rename"
+                      onClick={() => startRename(r.id, r.name)}
+                    >
+                      {r.name}
+                    </div>
+                    <button
+                      className="name-edit-btn"
+                      aria-label={`Rename ${r.name}`}
+                      title="Rename"
+                      onClick={() => startRename(r.id, r.name)}
+                    >
+                      <PencilIcon />
+                    </button>
                   </div>
                 )}
                 <div className="session-meta">
@@ -90,6 +105,21 @@ export function Routines({
                   <span>{timeAgo(r.createdAt)}</span>
                 </div>
               </div>
+              <button
+                className="session-action"
+                title={r.schedule ? `Scheduled at ${r.schedule}` : 'Schedule routine'}
+                aria-label={`Schedule ${r.name}`}
+                onClick={() => {
+                  const value = window.prompt(
+                    'Daily local time (HH:MM), or leave blank to disable:',
+                    r.schedule ?? '',
+                  );
+                  if (value !== null)
+                    onSchedule(r.id, /^\d{2}:\d{2}$/.test(value) ? value : undefined);
+                }}
+              >
+                {r.schedule ?? '⏱'}
+              </button>
               <button
                 className="session-action"
                 title="Open routine"

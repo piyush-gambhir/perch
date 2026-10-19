@@ -11,18 +11,31 @@ import { recordHistory } from './history';
 import { uid } from './id';
 import { withLock } from './locks';
 import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
-import { isInternalUrl } from './tabs';
+import { isInternalUrl, openStashedTabs } from './tabs';
 import type { ClosedRecord, Session, StashedTab } from './types';
 
 const SESSIONS_KEY = 'sessions';
 const CLOSED_KEY = 'recentlyClosed';
 const CLOSED_LIMIT = 12;
 
+/** A tab Perch can save and later reopen: a real page, not a browser internal. */
+const isSavable = (t: { url: string }) => !!t.url && !isInternalUrl(t.url);
+
 /** Reduce live tabs to the minimal {url,title} we persist, skipping internals. */
-export function toStashedTabs(tabs: { url: string; title: string }[]): StashedTab[] {
+export function toStashedTabs(
+  tabs: { url: string; title: string; pinned?: boolean }[],
+): StashedTab[] {
   return tabs
-    .filter((t) => t.url && !isInternalUrl(t.url))
-    .map((t) => ({ url: t.url, title: t.title || t.url }));
+    .filter(isSavable)
+    .map((t) => ({ url: t.url, title: t.title || t.url, pinned: t.pinned || undefined }));
+}
+
+/**
+ * The tabs a bulk stash or close may take: never pinned (a deliberate keep), and only
+ * ones toStashedTabs saves, so a bulk action never closes a tab it did not save.
+ */
+export function closableTabs<T extends { url: string; pinned?: boolean }>(tabs: T[]): T[] {
+  return tabs.filter((t) => !t.pinned && isSavable(t));
 }
 
 /* ---- Sessions ---- */
@@ -52,6 +65,15 @@ export async function deleteSession(id: string): Promise<void> {
 export async function renameSession(id: string, name: string): Promise<void> {
   await mutateSynced<Session>(SESSIONS_KEY, (list) =>
     list.map((s) => (s.id === id ? { ...s, name: name.trim() || s.name } : s)),
+  );
+}
+
+export async function updateSessionMeta(
+  id: string,
+  patch: Pick<Session, 'tags' | 'note'>,
+): Promise<void> {
+  await mutateSynced<Session>(SESSIONS_KEY, (list) =>
+    list.map((session) => (session.id === id ? { ...session, ...patch } : session)),
   );
 }
 
@@ -95,29 +117,57 @@ export async function appendOrCreateSession(name: string, tabs: StashedTab[]): P
   });
 }
 
-/** Open every tab in a session. Optionally in a new window, and/or remove after. */
+/**
+ * Open every tab in a session. Optionally in a new window, and/or remove after.
+ * With `remove`, only tabs that are now open leave the stash; any that failed to
+ * open stay in it, so a failed restore never loses them.
+ */
 export async function restoreSession(
   id: string,
   opts: { remove?: boolean; newWindow?: boolean } = {},
-): Promise<void> {
+): Promise<{ opened: number; failed: number }> {
   const sessions = await getSessions();
   const session = sessions.find((s) => s.id === id);
-  if (!session || session.tabs.length === 0) return;
+  if (!session || session.tabs.length === 0) return { opened: 0, failed: 0 };
 
+  // Snapshot what we're restoring: the "remove" step below must only delete these,
+  // so tabs another context adds to the stash mid-restore aren't silently wiped.
+  const restored = session.tabs;
+
+  let result: Awaited<ReturnType<typeof openStashedTabs>>;
   if (opts.newWindow) {
-    const [first, ...rest] = session.tabs;
-    if (!first) return;
-    const win = await browser.windows.create({ url: first.url });
-    const windowId = win?.id;
-    for (const tab of rest) {
-      await browser.tabs.create({ windowId, url: tab.url, active: false });
+    // The window is created with the first tab; if that URL is unopenable (e.g. from
+    // an imported backup), fall back to an empty window and retry it with the rest.
+    const [first, ...rest] = restored;
+    if (!first) return { opened: 0, failed: 0 };
+    let win: { id?: number } | undefined;
+    let remaining = rest;
+    let openedFirst = 0;
+    try {
+      win = await browser.windows.create({ url: first.url });
+      openedFirst = 1;
+    } catch {
+      win = await browser.windows.create({});
+      remaining = restored;
     }
+    result = await openStashedTabs(remaining, { windowId: win?.id, skipOpen: true });
+    result.opened += openedFirst;
   } else {
-    for (const tab of session.tabs) {
-      await browser.tabs.create({ url: tab.url, active: false });
-    }
+    result = await openStashedTabs(restored, { skipOpen: true });
   }
-  if (opts.remove) await deleteSession(id);
+
+  if (opts.remove) {
+    const failedUrls = new Set(result.failed.map((t) => t.url));
+    const restoredUrls = new Set(restored.map((t) => t.url).filter((url) => !failedUrls.has(url)));
+    await mutateSynced<Session>(SESSIONS_KEY, (list) =>
+      list
+        .map((s) =>
+          s.id === id ? { ...s, tabs: s.tabs.filter((t) => !restoredUrls.has(t.url)) } : s,
+        )
+        .filter((s) => s.id !== id || s.tabs.length > 0),
+    );
+  }
+  return { opened: result.opened, failed: result.failed.length };
 }
 
 /** Reorder stashes by moving one before another (drag-to-reorder). */
@@ -147,28 +197,36 @@ export async function pushClosed(label: string, tabs: StashedTab[]): Promise<voi
   });
 }
 
-/** Reopen a closed record's tabs and remove it from the undo stack. */
-export async function restoreClosed(id: string): Promise<void> {
-  const existing = await getRecentlyClosed();
-  const record = existing.find((r) => r.id === id);
-  if (!record) return;
-  for (const tab of record.tabs) {
-    await browser.tabs.create({ url: tab.url, active: false });
-  }
-  await withLock(`perch-store:${CLOSED_KEY}`, async () => {
+/**
+ * Reopen a closed record's tabs and remove it from the undo stack. The lock is held
+ * across the reopen, so a double-click or two Perch pages undoing at once can't
+ * reopen everything twice, and the record only shrinks once its tabs actually
+ * opened: any that failed stay in it for another try. Null when there is no record.
+ */
+export async function restoreClosed(
+  id: string,
+): Promise<{ opened: number; failed: number } | null> {
+  return withLock(`perch-store:${CLOSED_KEY}`, async () => {
     const cur = await getRecentlyClosed();
-    await browser.storage.local.set({ [CLOSED_KEY]: cur.filter((r) => r.id !== id) });
+    const record = cur.find((r) => r.id === id);
+    if (!record) return null;
+    const { opened, failed } = await openStashedTabs(record.tabs);
+    await browser.storage.local.set({
+      [CLOSED_KEY]: cur
+        .map((r) => (r.id === id ? { ...r, tabs: failed } : r))
+        .filter((r) => r.id !== id || r.tabs.length > 0),
+    });
+    return { opened, failed: failed.length };
   });
 }
 
 /** Reopen the most recent close (the Undo button / Cmd+Shift+T equivalent). */
-export async function undoLastClose(): Promise<boolean> {
+export async function undoLastClose(): Promise<{ opened: number; failed: number } | null> {
   const existing = await getRecentlyClosed();
-  if (existing.length === 0) return false;
+  if (existing.length === 0) return null;
   const latest = existing[0];
-  if (!latest) return false;
-  await restoreClosed(latest.id);
-  return true;
+  if (!latest) return null;
+  return restoreClosed(latest.id);
 }
 
 /** Subscribe to changes in either sessions (synced) or the undo stack (local). */

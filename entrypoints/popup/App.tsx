@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
-import { saveSession, toStashedTabs } from '../../utils/sessions';
+import { MoonIcon, PerchMark, StashIcon } from '../../components/icons';
+import { closableTabs, saveSession, toStashedTabs } from '../../utils/sessions';
 import { fetchOpenTabs, isInternalUrl, suspendInactiveTabs } from '../../utils/tabs';
 
 export function Popup() {
@@ -28,16 +29,25 @@ export function Popup() {
     }
   };
 
-  const openDashboard = () => run(async () => void (await browser.tabs.create({})));
+  // Open the extension page explicitly. This still works when Chrome has temporarily
+  // disabled the global new-tab override because another extension owns it.
+  const openDashboard = () =>
+    run(async () => {
+      await browser.tabs.create({ url: browser.runtime.getURL('/newtab.html') });
+    });
 
   const stashWindow = () =>
     run(async () => {
       const win = await browser.windows.getCurrent();
       const tabs = await browser.tabs.query({ windowId: win.id });
-      const stashable = tabs.filter((t) => t.url && !isInternalUrl(t.url) && t.id !== undefined);
-      const stashed = toStashedTabs(
-        stashable.map((t) => ({ url: t.url ?? '', title: t.title ?? '' })),
+      // Same rule as the dashboard's bulk actions: pinned tabs stay, and only tabs that
+      // get saved are closed. Incognito tabs never enter (synced) Perch storage.
+      const stashable = closableTabs(
+        tabs
+          .filter((t) => t.id !== undefined && !t.incognito)
+          .map((t) => ({ ...t, url: t.url ?? '' })),
       );
+      const stashed = toStashedTabs(stashable.map((t) => ({ url: t.url, title: t.title ?? '' })));
       if (stashed.length > 0) {
         await saveSession('Window', stashed);
         await browser.tabs.remove(stashable.map((t) => t.id as number));
@@ -49,23 +59,52 @@ export function Popup() {
   return (
     <div className="popup">
       <div className="popup-head">
-        <span className="popup-brand">Perch</span>
-        {count !== null && (
-          <span className="popup-count">
-            {count} open tab{count !== 1 ? 's' : ''}
+        <div className="popup-brand">
+          <span className="popup-mark">
+            <PerchMark />
           </span>
-        )}
+          <div>
+            <strong>Perch</strong>
+            <span>Your tabs, calmly organized.</span>
+          </div>
+        </div>
+        <span className="popup-status" title="Perch is running" />
       </div>
-      <button className="popup-btn primary" onClick={openDashboard} disabled={busy}>
-        Open dashboard
+
+      <div className="popup-stat">
+        <strong>{count ?? '…'}</strong>
+        <span>open tab{count !== 1 ? 's' : ''}</span>
+      </div>
+
+      <button className="popup-dashboard" onClick={openDashboard} disabled={busy}>
+        <span>Open Perch dashboard</span>
+        <span aria-hidden="true">→</span>
       </button>
-      <button className="popup-btn" onClick={stashWindow} disabled={busy}>
-        Stash this window
-      </button>
-      <button className="popup-btn" onClick={suspend} disabled={busy}>
-        Suspend inactive tabs
-      </button>
+
+      <div className="popup-actions">
+        <button className="popup-action" onClick={stashWindow} disabled={busy}>
+          <span className="popup-action-icon">
+            <StashIcon />
+          </span>
+          <span>
+            <strong>Stash window</strong>
+            <small>Save and close these tabs</small>
+          </span>
+        </button>
+        <button className="popup-action" onClick={suspend} disabled={busy}>
+          <span className="popup-action-icon">
+            <MoonIcon />
+          </span>
+          <span>
+            <strong>Suspend inactive</strong>
+            <small>Free memory without closing</small>
+          </span>
+        </button>
+      </div>
       {error && <div className="popup-error">{error}</div>}
+      <div className="popup-foot">
+        Tip: type <kbd>perch</kbd> in the address bar
+      </div>
     </div>
   );
 }
