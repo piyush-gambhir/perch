@@ -9,24 +9,6 @@ import { loadSynced, mutateSynced, onSyncedChanged } from './syncedStore';
 import type { DeferredTab, SavedTabs } from './types';
 
 const KEY = 'deferred';
-const ARCHIVED_LIMIT = 200;
-
-function pruneArchived(list: DeferredTab[]): DeferredTab[] {
-  const archived = list.filter((t) => t.completed);
-  if (archived.length <= ARCHIVED_LIMIT) return list;
-
-  const keep = new Set(
-    [...archived]
-      .sort((a, b) => {
-        const aTime = Date.parse(a.completedAt ?? '');
-        const bTime = Date.parse(b.completedAt ?? '');
-        return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
-      })
-      .slice(0, ARCHIVED_LIMIT)
-      .map((t) => t.id),
-  );
-  return list.filter((t) => !t.completed || keep.has(t.id));
-}
 
 /** Save a single tab to the checklist. */
 export async function saveTabForLater(tab: { url: string; title: string }): Promise<void> {
@@ -55,17 +37,15 @@ export async function getSavedTabs(): Promise<SavedTabs> {
 /** Mark a saved tab as completed (moves it to the archive). */
 export async function checkOffSavedTab(id: string): Promise<void> {
   await mutateSynced<DeferredTab>(KEY, (list) =>
-    pruneArchived(
-      list.map((t) =>
-        t.id === id ? { ...t, completed: true, completedAt: new Date().toISOString() } : t,
-      ),
+    list.map((t) =>
+      t.id === id ? { ...t, completed: true, completedAt: new Date().toISOString() } : t,
     ),
   );
 }
 
 /** Mark a saved tab as dismissed (removed from all lists). */
 export async function dismissSavedTab(id: string): Promise<void> {
-  await mutateSynced<DeferredTab>(KEY, (list) => pruneArchived(list.filter((t) => t.id !== id)));
+  await mutateSynced<DeferredTab>(KEY, (list) => list.filter((t) => t.id !== id));
 }
 
 export async function updateSavedTabMeta(
