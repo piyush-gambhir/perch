@@ -3,6 +3,14 @@ import { defineConfig } from 'wxt';
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
+  hooks: {
+    'build:manifestGenerated': (wxt, manifest) => {
+      // `browser_specific_settings` (Gecko id, data collection declaration) is for
+      // Firefox only. WXT keeps it on every target, so drop it from other builds to
+      // keep the Chrome manifest free of keys Chrome does not use.
+      if (wxt.config.browser !== 'firefox') delete manifest.browser_specific_settings;
+    },
+  },
   manifest: {
     name: 'Perch',
     description:
