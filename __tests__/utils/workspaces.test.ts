@@ -34,6 +34,18 @@ describe('switchWorkspace', () => {
     expect((await getWorkspaces()).map((w) => w.name)).toEqual(['B']);
   });
 
+  it('keeps pinned tabs open and out of the capture', async () => {
+    const a = await createWorkspace('A');
+    const b = await createWorkspace('B');
+    await setActiveWorkspaceId(a.id);
+    openTabs({ url: 'https://mail.test/', title: 'Mail', pinned: true });
+    openTabs({ url: 'https://doc.test/', title: 'Doc' });
+
+    await switchWorkspace(b.id);
+    expect(await tabsOf(a.id)).toEqual([{ url: 'https://doc.test/', title: 'Doc' }]);
+    expect(fake.tabs.map((tab) => tab.url)).toEqual(['https://mail.test/']);
+  });
+
   it('still captures open tabs into the active workspace', async () => {
     const a = await createWorkspace('A');
     const b = await createWorkspace('B');

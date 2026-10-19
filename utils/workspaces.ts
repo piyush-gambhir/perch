@@ -83,7 +83,9 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     const win = await browser.windows.getCurrent();
     const winId = win?.id;
     const live = await browser.tabs.query(winId !== undefined ? { windowId: winId } : {});
-    const real = live.filter((t) => t.url && !isInternalUrl(t.url) && !t.incognito);
+    // Pinned tabs are a deliberate keep: they stay open across every workspace, so
+    // they are neither captured nor closed (as in the dashboard's bulk actions).
+    const real = live.filter((t) => t.url && !isInternalUrl(t.url) && !t.incognito && !t.pinned);
     const captured: StashedTab[] = real.map((t) => ({
       url: t.url as string,
       title: t.title || (t.url as string),
