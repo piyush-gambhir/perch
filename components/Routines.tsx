@@ -55,7 +55,7 @@ export function Routines({
           <PlusIcon />
         </button>
       </div>
-      <p className="panel-subtitle">Reusable sets — opening never uses them up.</p>
+      <p className="panel-subtitle">Reusable sets: opening never uses them up.</p>
 
       {routines.length === 0 ? (
         <div className="deferred-empty">Save your open tabs as a routine to reopen anytime.</div>

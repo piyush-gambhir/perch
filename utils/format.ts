@@ -106,7 +106,7 @@ export function smartTitle(title: string, url: string): string {
       if (rest[0] === 'issues' && rest[1]) return `${owner}/${repo} Issue #${rest[1]}`;
       if (rest[0] === 'pull' && rest[1]) return `${owner}/${repo} PR #${rest[1]}`;
       if (rest[0] === 'blob' || rest[0] === 'tree')
-        return `${owner}/${repo} — ${rest.slice(2).join('/')}`;
+        return `${owner}/${repo} · ${rest.slice(2).join('/')}`;
       if (titleIsUrl) return `${owner}/${repo}`;
     }
   }

@@ -118,7 +118,7 @@ export function SettingsModal({ open, settings, onChange, onClose }: SettingsMod
       const summary = await importAll(data);
       showToast(summary);
     } catch {
-      showToast('Import failed — not a valid Perch backup');
+      showToast('Import failed: not a valid Perch backup');
     }
   };
 

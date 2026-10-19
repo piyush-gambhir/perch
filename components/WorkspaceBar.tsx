@@ -60,7 +60,7 @@ export function WorkspaceBar({
                 onClick={() => !active && onSwitch(w.id)}
                 onDoubleClick={() => startRename(w.id, w.name)}
                 title={
-                  active ? `${w.name} (current — double-click to rename)` : `Switch to ${w.name}`
+                  active ? `${w.name} (current, double-click to rename)` : `Switch to ${w.name}`
                 }
               >
                 {w.name}
