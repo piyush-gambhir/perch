@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { MoonIcon, PerchMark, StashIcon } from '../../components/icons';
-import { saveSession, toStashedTabs } from '../../utils/sessions';
+import { closableTabs, saveSession, toStashedTabs } from '../../utils/sessions';
 import { fetchOpenTabs, isInternalUrl, suspendInactiveTabs } from '../../utils/tabs';
 
 export function Popup() {
@@ -40,10 +40,14 @@ export function Popup() {
     run(async () => {
       const win = await browser.windows.getCurrent();
       const tabs = await browser.tabs.query({ windowId: win.id });
-      const stashable = tabs.filter((t) => t.url && !isInternalUrl(t.url) && t.id !== undefined);
-      const stashed = toStashedTabs(
-        stashable.map((t) => ({ url: t.url ?? '', title: t.title ?? '' })),
+      // Same rule as the dashboard's bulk actions: pinned tabs stay, and only tabs that
+      // get saved are closed. Incognito tabs never enter (synced) Perch storage.
+      const stashable = closableTabs(
+        tabs
+          .filter((t) => t.id !== undefined && !t.incognito)
+          .map((t) => ({ ...t, url: t.url ?? '' })),
       );
+      const stashed = toStashedTabs(stashable.map((t) => ({ url: t.url, title: t.title ?? '' })));
       if (stashed.length > 0) {
         await saveSession('Window', stashed);
         await browser.tabs.remove(stashable.map((t) => t.id as number));

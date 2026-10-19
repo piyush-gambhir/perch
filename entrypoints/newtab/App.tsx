@@ -54,6 +54,7 @@ import {
 import type { DragTab } from '../../utils/dnd';
 import {
   addTabsToSession,
+  closableTabs,
   deleteSession,
   pushClosed,
   renameSession,
@@ -237,22 +238,26 @@ function Dashboard() {
   };
 
   const handleCloseGroup = async (group: DomainGroup) => {
+    // Pinned tabs stay open, as in Close all.
+    const closable = closableTabs(group.tabs);
+    if (closable.length === 0) return;
     // Record the undo entry BEFORE closing: if closing fails halfway, the tabs that
     // did close are still recoverable (mirrors the stash-then-close ordering).
-    const stashed = toStashedTabs(group.tabs);
+    const stashed = toStashedTabs(closable);
     await pushClosed(groupLabel(group), stashed);
-    await closeTabsByIds(idsOf(group.tabs));
-    showToast(`Closed ${group.tabs.length} tab${group.tabs.length !== 1 ? 's' : ''}`, () =>
+    await closeTabsByIds(idsOf(closable));
+    showToast(`Closed ${closable.length} tab${closable.length !== 1 ? 's' : ''}`, () =>
       handleUndo(),
     );
     await refresh();
   };
 
   const handleStashGroup = async (group: DomainGroup) => {
-    const tabs = toStashedTabs(group.tabs);
+    const closable = closableTabs(group.tabs);
+    const tabs = toStashedTabs(closable);
     if (tabs.length === 0) return;
     await saveSession(groupLabel(group), tabs);
-    await closeTabsByIds(idsOf(group.tabs));
+    await closeTabsByIds(idsOf(closable));
     showToast(`Stashed ${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`);
     await refresh();
   };
@@ -265,8 +270,8 @@ function Dashboard() {
   };
 
   const handleCloseAll = async () => {
-    // Pinned tabs are deliberately kept — "fresh start" shouldn't take them down.
-    const closable = realTabs.filter((t) => !t.pinned);
+    // Pinned tabs are deliberately kept: "fresh start" shouldn't take them down.
+    const closable = closableTabs(realTabs);
     const stashed = toStashedTabs(closable);
     await pushClosed(`${stashed.length} tabs`, stashed);
     await closeTabsByIds(idsOf(closable));
@@ -275,7 +280,7 @@ function Dashboard() {
   };
 
   const handleStashAll = async () => {
-    const closable = realTabs.filter((t) => !t.pinned);
+    const closable = closableTabs(realTabs);
     const tabs = toStashedTabs(closable);
     if (tabs.length === 0) return;
     await saveSession('All tabs', tabs);
