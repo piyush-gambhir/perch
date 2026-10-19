@@ -62,8 +62,10 @@ async function checkLocalBuild(): Promise<void> {
 }
 
 function enableLocalBuildReload(): void {
-  void checkLocalBuild();
-  setInterval(checkLocalBuild, 2_000);
+  // Poll only when the first check found a marker, so store builds never start polling.
+  void checkLocalBuild().then(() => {
+    if (localBuildId) setInterval(checkLocalBuild, 2_000);
+  });
 }
 
 // Firefox builds as MV2, where the API is `browserAction`; `action` is MV3/Chrome.
