@@ -2,7 +2,7 @@
   "name": "perch-extension",
   "version": "1.1.0",
   "private": true,
-  "description": "Perch — New tab page that groups your open tabs by domain and lets you close them with style.",
+  "description": "Perch \u2014 New tab page that groups your open tabs by domain and lets you close them with style.",
   "author": "Piyush Gambhir",
   "type": "module",
   "packageManager": "pnpm@12.11.2",
@@ -25,7 +25,8 @@
     "test": "pnpm run typecheck && vitest run",
     "typecheck": "tsc --noEmit",
     "zip": "pnpm run generate:icons && wxt zip",
-    "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox"
+    "zip:firefox": "pnpm run generate:icons && wxt zip -b firefox",
+    "test:security": "node --test scripts/security/verify-node-forge-security.cjs"
   },
   "dependencies": {
     "react": "^19.3.1",

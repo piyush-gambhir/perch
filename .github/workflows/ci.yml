@@ -34,6 +34,7 @@ jobs:
           node-version: '24.22.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:security
 
       - name: Typecheck
         if: matrix.task == 'typecheck'
