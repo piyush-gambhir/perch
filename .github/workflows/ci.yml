@@ -31,9 +31,10 @@ jobs:
           version: 12.11.2
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: '24.22.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:security
 
       - name: Typecheck
         if: matrix.task == 'typecheck'
