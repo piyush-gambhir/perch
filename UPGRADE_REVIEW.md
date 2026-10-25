@@ -15,3 +15,5 @@ Production audit: zero findings. Full audit: one high development finding for no
 Gains: current runtime support and tooling, TypeScript 7 checking, and preservation of newer security work. No runtime performance improvement was benchmarked. Node is a build tool here; the extension runs in the browser.
 
 Release triggers remain v* tags or manual publish workflow dispatch with Google OIDC store upload. CI runs on main pushes and pull requests. No workflow was dispatched, no local shelf publishing command ran, and no release, upload, or deployment occurred.
+
+Publication readiness check: the repository currently configures Google identity variables but has no `CHROME_EXTENSION_ID` or `CHROME_PUBLISHER_ID` repository variables. The listing checklist documents initial manual submission. Store publication remains pending the actual item/publisher identity; this upgrade does not create a new store item or modify live variables. The publish workflow now reruns the existing security regressions before packaging.

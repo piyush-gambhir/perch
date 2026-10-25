@@ -41,6 +41,8 @@ jobs:
             exit 1
           fi
 
+      - run: pnpm test:security
+
       - name: Typecheck and test
         run: pnpm test
       - name: Build and zip
