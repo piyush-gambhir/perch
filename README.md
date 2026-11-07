@@ -3,8 +3,25 @@
 **A calm home for your tabs.** A new-tab dashboard that groups your open tabs by
 domain and makes closing them safe. No server, no account, no analytics.
 
+![Perch on a new tab: open tabs grouped by site, a stashed group, and two pages saved for later](docs/images/dashboard.png)
+
 Built with [WXT](https://wxt.dev) + React + TypeScript: typed logic, unit tests,
 HMR, and cross-browser builds.
+
+## Install
+
+Every [GitHub release](https://github.com/piyush-gambhir/perch/releases/latest) carries a
+ready-made Chrome build.
+
+1. Download `perch-extension-<version>-chrome.zip` from the latest release.
+2. Unzip it into a folder of its own.
+3. Open `chrome://extensions` and turn on **Developer mode**.
+4. Click **Load unpacked** and select that folder.
+5. Open a new tab.
+
+To update, unzip the newer release into the same folder and press the reload button on the
+extension's card. Chrome treats a different folder as a different extension, without your
+stashes or saved tabs.
 
 ## Features
 
@@ -24,6 +41,8 @@ HMR, and cross-browser builds.
 - **Control center** — health checks for duplicates, stale tabs, tracking URLs, and memory-saving candidates
 - **Automation rules** — stash, deduplicate, or suspend matching domains by age, with pinned-tab protection
 - **Scheduled routines** — optionally open a routine at a local daily time
+
+![The ⌘K command palette searching open tabs, stashes, and saved pages for "grid"](docs/images/command-palette.png)
 
 **Organize**
 
