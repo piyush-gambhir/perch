@@ -1,7 +1,7 @@
-/**
- * User settings, persisted in browser.storage.sync so they follow the user across
- * devices, with a local fallback if sync is temporarily unavailable.
- */
+
+
+
+
 
 import { browser } from 'wxt/browser';
 import { withLock } from './locks';
@@ -11,7 +11,7 @@ export type Theme = 'auto' | 'light' | 'dark';
 export interface Settings {
   theme: Theme;
   staleDays: number;
-  /** Auto-stash stale tabs on a recurring background schedule. */
+
   autoStash: boolean;
 }
 
@@ -30,7 +30,7 @@ function revision(stored: StoredSettings | undefined): number {
   return typeof stored?.[REV_KEY] === 'number' ? stored[REV_KEY] : 0;
 }
 
-/** Pure merge of stored values onto defaults, clamping/validating each field. */
+
 export function mergeSettings(stored: unknown): Settings {
   const s = (stored ?? {}) as Partial<Settings>;
   const theme: Theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto';
@@ -49,8 +49,8 @@ export async function getSettings(): Promise<Settings> {
   ]);
   const sync = syncResult.status === 'fulfilled' ? syncResult.value : undefined;
   const local = localResult.status === 'fulfilled' ? localResult.value : undefined;
-  // Legacy unrevisioned sync data still wins when no local copy exists. Once either
-  // side has a revision, the newest successful write wins.
+
+
   const winner =
     sync?.settings !== undefined &&
     (local?.settings === undefined || revision(sync) >= revision(local))
@@ -69,7 +69,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
     try {
       await browser.storage.sync.set({ [KEY]: next, [REV_KEY]: rev });
     } catch {
-      /* storage.local is the required fallback when sync is unavailable. */
+
     }
     return next;
   });

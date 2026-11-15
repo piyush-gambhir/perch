@@ -1,10 +1,10 @@
-/* ============================================================
-   Perch — Soft-Modern design system
-   Token-based, light + dark via prefers-color-scheme.
-   ============================================================ */
 
-/* Self-hosted Inter (bundled) — no external font fetch, so the page makes zero
-   network calls of its own (favicons aside). */
+
+
+
+
+
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -87,8 +87,8 @@
   }
 }
 
-/* Manual theme override (Settings → Appearance). Higher specificity than the
-   prefers-color-scheme block, so it wins regardless of OS setting. */
+
+
 :root[data-theme='light'] {
   --bg: #f4f5f7;
   --bg-grad: radial-gradient(
@@ -213,7 +213,7 @@ body {
   font-weight: 750;
 }
 
-/* Scrollbars */
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -229,7 +229,7 @@ body {
   background-clip: content-box;
 }
 
-/* ============================================================ LAYOUT */
+
 
 .container {
   max-width: 1280px;
@@ -237,7 +237,7 @@ body {
   padding: 44px 28px 64px;
 }
 
-/* ============================================================ OVERVIEW */
+
 
 .overview-card {
   display: grid;
@@ -395,7 +395,7 @@ header {
   color: var(--text-muted);
 }
 
-/* Visually hidden, still read by screen readers. */
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -419,7 +419,7 @@ header {
   min-width: 0;
 }
 
-/* ============================================================ SECTION HEADERS */
+
 
 .section-header {
   display: flex;
@@ -452,7 +452,7 @@ header {
   white-space: nowrap;
 }
 
-/* One-line explainer under a sidebar panel heading. */
+
 .panel-subtitle {
   margin: -8px 0 12px;
   font-size: 12px;
@@ -460,7 +460,7 @@ header {
   color: var(--text-faint);
 }
 
-/* ============================================================ MISSIONS GRID */
+
 
 .missions {
   display: grid;
@@ -469,7 +469,7 @@ header {
   align-items: start;
 }
 
-/* ============================================================ DOMAIN CARD */
+
 
 .mission-card {
   background: var(--surface);
@@ -537,7 +537,7 @@ header {
   background: var(--warn-soft);
 }
 
-/* ============================================================ TAB CHIPS (rows) */
+
 
 .mission-pages {
   display: flex;
@@ -637,7 +637,7 @@ header {
   color: var(--danger);
 }
 
-/* "+N more" ghost row */
+
 .page-chip-overflow {
   justify-content: center;
   color: var(--text-faint);
@@ -652,7 +652,7 @@ header {
   background: var(--accent-soft) !important;
 }
 
-/* ============================================================ CARD ACTIONS */
+
 
 .actions {
   display: flex;
@@ -701,7 +701,7 @@ header {
   color: var(--danger);
 }
 
-/* ============================================================ EMPTY STATE */
+
 
 .missions-empty-state {
   grid-column: 1 / -1;
@@ -745,7 +745,7 @@ header {
   color: var(--text-muted);
 }
 
-/* ============================================================ DUPE BANNER */
+
 
 .tab-cleanup-banner {
   display: flex;
@@ -804,7 +804,7 @@ header {
   background: var(--accent-hover);
 }
 
-/* ============================================================ SAVED FOR LATER */
+
 
 .sidebar {
   width: 320px;
@@ -943,7 +943,7 @@ header {
   padding: 8px 8px 4px;
 }
 
-/* Archive */
+
 .deferred-archive {
   margin-top: 14px;
 }
@@ -1045,7 +1045,7 @@ header {
   flex-shrink: 0;
 }
 
-/* ============================================================ FOOTER */
+
 
 footer {
   display: flex;
@@ -1059,7 +1059,7 @@ footer {
   color: var(--text-faint);
 }
 
-/* ============================================================ TOAST */
+
 
 .toast {
   position: fixed;
@@ -1113,7 +1113,7 @@ footer {
   background: var(--surface-hover);
 }
 
-/* ============================================================ TOOLBAR */
+
 
 .toolbar {
   display: flex;
@@ -1165,7 +1165,7 @@ footer {
   margin-left: 2px;
 }
 
-/* ============================================================ STALE BANNER */
+
 
 .stale-banner {
   background: var(--warn-soft);
@@ -1202,7 +1202,7 @@ footer {
   background: var(--surface);
 }
 
-/* ============================================================ SESSIONS */
+
 
 .session-list {
   display: flex;
@@ -1347,8 +1347,8 @@ footer {
   opacity: 1;
 }
 
-/* Row actions overlay the right edge instead of reserving width while hidden, so the
-   name and meta keep the full row in the narrow sidebar. */
+
+
 .session-item,
 .deferred-item {
   position: relative;
@@ -1399,7 +1399,7 @@ footer {
   color: var(--danger);
 }
 
-/* ============================================================ COMMAND PALETTE */
+
 
 .palette-overlay {
   position: fixed;
@@ -1536,7 +1536,7 @@ footer {
   background: var(--surface);
 }
 
-/* ============================================================ SEARCH FIELD + ICON BTN */
+
 
 .search-field {
   display: inline-flex;
@@ -1589,7 +1589,7 @@ footer {
   height: 17px;
 }
 
-/* ============================================================ SETTINGS MODAL */
+
 
 .settings-modal {
   width: 100%;
@@ -1650,7 +1650,7 @@ footer {
   color: var(--text-faint);
 }
 
-/* Segmented control */
+
 .segmented {
   display: inline-flex;
   background: var(--surface-2);
@@ -1680,7 +1680,7 @@ footer {
   box-shadow: var(--shadow-sm);
 }
 
-/* Range stepper */
+
 .setting-stepper {
   display: flex;
   align-items: center;
@@ -1701,7 +1701,7 @@ footer {
   text-align: right;
 }
 
-/* ============================================================ TAB GROUPS + DND */
+
 
 .group-dot {
   width: 10px;
@@ -1753,7 +1753,7 @@ footer {
     0 0 0 2px var(--accent-ring) inset;
 }
 
-/* ============================================================ TOGGLE + ICON BTN + BULK BAR */
+
 
 .toggle {
   width: 40px;
@@ -1814,10 +1814,10 @@ footer {
   height: 15px;
 }
 
-/* Bulk-select action bar */
+
 .bulk-bar {
   position: fixed;
-  bottom: 88px; /* sits above the toast (28px) so the two never overlap */
+  bottom: 88px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1841,7 +1841,7 @@ footer {
   gap: 6px;
 }
 
-/* Checkbox is out of the layout until selection mode or hover, so it never shifts chips. */
+
 .tab-select {
   width: 0;
   height: 15px;
@@ -1867,7 +1867,7 @@ footer {
   background: var(--accent-soft);
 }
 
-/* ============================================================ FOCUS + TOUCH */
+
 
 :focus-visible {
   outline: 2px solid var(--accent-ring);
@@ -1875,7 +1875,7 @@ footer {
   border-radius: 4px;
 }
 
-/* On touch / coarse pointers there is no hover, so reveal row actions permanently. */
+
 @media (hover: none) {
   .chip-actions,
   .row-actions,
@@ -1892,7 +1892,7 @@ footer {
   }
 }
 
-/* ============================================================ FIRST-RUN TOUR */
+
 
 .tour-card {
   width: 100%;
@@ -1973,7 +1973,7 @@ footer {
   width: 100%;
 }
 
-/* ============================================================ WORKSPACES */
+
 
 .workspace-bar {
   display: flex;
@@ -2099,7 +2099,7 @@ footer {
   height: 15px;
 }
 
-/* Recovery, health and automation */
+
 .control-center {
   width: min(780px, calc(100vw - 32px));
   max-height: min(820px, calc(100vh - 48px));
@@ -2116,13 +2116,13 @@ footer {
   margin: 0;
 }
 
-/* The dialog already pads its content, and the first section draws the divider. */
+
 .control-center .settings-head {
   padding: 0 0 16px;
   border-bottom: 0;
 }
 
-/* panel-subtitle's negative top margin suits section headers, not a dialog title. */
+
 .settings-head .panel-subtitle {
   margin: 2px 0 0;
 }
@@ -2242,7 +2242,7 @@ footer {
   margin-left: 24px;
 }
 
-/* ============================================================ RESPONSIVE */
+
 
 @media (max-width: 900px) {
   .overview-card {

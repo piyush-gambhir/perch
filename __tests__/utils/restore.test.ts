@@ -56,7 +56,7 @@ describe('restoreClosed (undo) keeps its record until the tabs open', () => {
     const [record] = await getRecentlyClosed();
     expect(record?.tabs).toEqual([A]);
 
-    // A retry once the URL can open drains the record.
+
     fake.failUrls.clear();
     expect(await restoreClosed(record!.id)).toEqual({ opened: 1, failed: 0 });
     expect(await getRecentlyClosed()).toEqual([]);

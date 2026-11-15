@@ -21,7 +21,7 @@ import type { AutomationAction, AutomationRule, Snapshot, TabInfo } from '../uti
 import { ChevronIcon } from './icons';
 import { useToast } from './Toast';
 
-/** Snapshots listed before "Show all"; every retained one stays reachable. */
+
 const SNAPSHOT_PREVIEW = 8;
 
 interface Props {

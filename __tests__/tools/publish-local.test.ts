@@ -18,7 +18,7 @@ const repo = fileURLToPath(new URL('../..', import.meta.url));
 const script = join(repo, 'tools/publish-local.mjs');
 const temps: string[] = [];
 
-/** Run the script with this shelf (and HOME). Refusals must happen before any write. */
+
 function publish(shelf: string, home?: string) {
   return spawnSync(process.execPath, [script], {
     encoding: 'utf8',

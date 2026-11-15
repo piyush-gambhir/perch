@@ -1,4 +1,4 @@
-/** A one-time welcome card pointing at the features people miss. */
+
 
 import { useEffect, useRef, type MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';

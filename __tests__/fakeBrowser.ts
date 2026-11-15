@@ -1,12 +1,12 @@
-/**
- * A small in-memory stand-in for the parts of `browser` that Perch's storage and tab
- * code touch. Tests opt in with:
- *
- *   vi.mock('wxt/browser', async () => ({ browser: (await import('../fakeBrowser')).fakeBrowser }));
- *
- * Storage values are JSON round-tripped like chrome.storage does, so `undefined`
- * fields disappear exactly as they would in the browser.
- */
+
+
+
+
+
+
+
+
+
 
 export interface FakeTab {
   id: number;
@@ -42,7 +42,7 @@ function storageArea() {
 
 export const fake = {
   tabs: [] as FakeTab[],
-  /** URLs that tabs.create / windows.create reject, like an unopenable restore target. */
+
   failUrls: new Set<string>(),
   nextTabId: 1,
   nextWindowId: 2,
@@ -96,7 +96,7 @@ export const fakeBrowser = {
   },
 };
 
-/** Clear all fake state between tests. */
+
 export function resetFakeBrowser(): void {
   fake.tabs = [];
   fake.failUrls.clear();
@@ -106,7 +106,7 @@ export function resetFakeBrowser(): void {
   fakeBrowser.storage.sync.data.clear();
 }
 
-/** Seed open tabs (window 1 unless given). */
+
 export function openTabs(...tabs: (Partial<FakeTab> & { url: string })[]): FakeTab[] {
   const created = tabs.map((tab) => ({ id: fake.nextTabId++, windowId: 1, ...tab }));
   fake.tabs.push(...created);

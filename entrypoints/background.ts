@@ -1,9 +1,9 @@
-/**
- * Service worker:
- *  - keeps the toolbar badge showing the open-tab count, color-coded by workload;
- *  - runs the hourly auto-stash alarm (when enabled in Settings);
- *  - provides the right-click context menu ("Stash in Perch" / "Save for later").
- */
+
+
+
+
+
+
 
 import { browser } from 'wxt/browser';
 import { saveTabForLater } from '../utils/storage';
@@ -34,10 +34,10 @@ const CTX_SAVE = 'perch-ctx-save';
 let badgeTimer: ReturnType<typeof setTimeout> | null = null;
 let localBuildId: string | null = null;
 
-/**
- * Unpacked local builds contain a marker that store builds do not. Polling it lets
- * Chrome reload the extension after `pnpm build:local` replaces the shelf folder.
- */
+
+
+
+
 async function checkLocalBuild(): Promise<void> {
   try {
     const localMarkerUrl = (browser.runtime.getURL as (path: string) => string)(
@@ -57,18 +57,18 @@ async function checkLocalBuild(): Promise<void> {
       browser.runtime.reload();
     }
   } catch {
-    // Store builds have no marker; local auto-reload simply remains disabled.
+
   }
 }
 
 function enableLocalBuildReload(): void {
-  // Poll only when the first check found a marker, so store builds never start polling.
+
   void checkLocalBuild().then(() => {
     if (localBuildId) setInterval(checkLocalBuild, 2_000);
   });
 }
 
-// Firefox builds as MV2, where the API is `browserAction`; `action` is MV3/Chrome.
+
 type BadgeApi = {
   setBadgeText: (d: { text: string }) => Promise<void>;
   setBadgeBackgroundColor: (d: { color: string }) => Promise<void>;
@@ -96,35 +96,35 @@ async function updateBadge(): Promise<void> {
   }
 }
 
-/** Coalesce bursts of tab events into one badge refresh. */
+
 function scheduleBadge(): void {
   if (badgeTimer) clearTimeout(badgeTimer);
   badgeTimer = setTimeout(updateBadge, 400);
 }
 
-/** When enabled, stash stale tabs into today's auto-stash session and close them. */
+
 async function runAutoStash(): Promise<void> {
   const settings = await getSettings();
   if (!settings.autoStash) return;
   const tabs = await fetchOpenTabs();
   const real = tabs.filter((t) => !t.isPerchTab && !isInternalUrl(t.url));
-  const stale = staleTabs(real, Date.now(), settings.staleDays); // excludes active + suspended
+  const stale = staleTabs(real, Date.now(), settings.staleDays);
   if (stale.length === 0) return;
   const stashed = toStashedTabs(stale);
   const label = `Auto-stash · ${new Date().toLocaleDateString()}`;
-  await appendOrCreateSession(label, stashed); // reuse today's session instead of spawning one/hour
+  await appendOrCreateSession(label, stashed);
   await closeTabsByIds(stale.map((t) => t.id));
 }
 
 async function runAutomationRules(): Promise<void> {
   for (const rule of await getAutomationRules()) {
-    // Re-read per rule so an earlier rule's closes can't make a later one act on stale tabs.
+
     const tabs = (await fetchOpenTabs()).filter(
       (tab) => !tab.isPerchTab && !isInternalUrl(tab.url),
     );
     const matches = tabsMatchingRule(rule, tabs);
     if (!matches.length) continue;
-    // Every action touches only the rule's own matches, never other tabs.
+
     if (rule.action === 'stash') {
       const stashed = toStashedTabs(matches);
       await appendOrCreateSession(`Rule · ${rule.name}`, stashed);
@@ -157,11 +157,11 @@ async function runScheduledRoutines(): Promise<void> {
   await browser.storage.local.set({ routineScheduleRuns: runs });
 }
 
-/**
- * Keep the alarm in step with the setting: registered while auto-stash is on
- * (without resetting its schedule if it already exists), cleared while off — so a
- * disabled feature doesn't wake the service worker every hour.
- */
+
+
+
+
+
 async function syncAlarmToSettings(): Promise<void> {
   try {
     const settings = await getSettings();
@@ -174,7 +174,7 @@ async function syncAlarmToSettings(): Promise<void> {
     const snapshot = await browser.alarms.get(SNAPSHOT_ALARM);
     if (!snapshot) await browser.alarms.create(SNAPSHOT_ALARM, { periodInMinutes: 15 });
   } catch {
-    /* alarms unavailable */
+
   }
 }
 
@@ -198,7 +198,7 @@ export default defineBackground(() => {
   enableLocalBuildReload();
   browser.runtime.onInstalled.addListener(() => {
     updateBadge();
-    setupContextMenus(); // menus persist in MV3 — (re)create only on install/update
+    setupContextMenus();
     void syncAlarmToSettings();
   });
   browser.runtime.onStartup.addListener(() => {
@@ -210,8 +210,8 @@ export default defineBackground(() => {
   browser.tabs.onRemoved.addListener(scheduleBadge);
   browser.tabs.onUpdated.addListener(scheduleBadge);
 
-  // React to the auto-stash toggle immediately (settings live in sync, with a
-  // local fallback copy).
+
+
   browser.storage.onChanged.addListener((changes, area) => {
     if ((area === 'sync' || area === 'local') && 'settings' in changes) {
       void syncAlarmToSettings();
@@ -221,13 +221,13 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === AUTO_STASH_ALARM) {
       runAutoStash().catch(() => {
-        /* best-effort; next hourly run retries */
+
       });
     }
     if (alarm.name === SNAPSHOT_ALARM) {
-      // Three independent jobs, each best-effort with its own catch, so a failed
-      // snapshot (e.g. a storage quota error) skips neither rules nor routines. They
-      // run in order so the snapshot sees the tabs before any rule closes them.
+
+
+
       void (async () => {
         await captureSnapshot('automatic').catch(() => {});
         await runAutomationRules().catch(() => {});
@@ -253,8 +253,8 @@ export default defineBackground(() => {
       const query = raw.trim();
       const lower = query.toLowerCase();
       if (lower === 'stash') {
-        // Close exactly what gets saved: internal pages (and Perch itself) are never
-        // stashed, so they must not be closed either.
+
+
         const tabs = closableTabs(await fetchOpenTabs());
         await saveSession('Omnibox stash', toStashedTabs(tabs));
         await closeTabsByIds(tabs.map((tab) => tab.id));

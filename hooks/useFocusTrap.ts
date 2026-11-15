@@ -1,7 +1,7 @@
-/**
- * Accessible dialog focus management: when `open`, move focus into the container,
- * keep Tab within it, and restore focus to the previously-focused element on close.
- */
+
+
+
+
 
 import { useEffect, type RefObject } from 'react';
 
@@ -22,7 +22,7 @@ export function useFocusTrap(open: boolean, ref: RefObject<HTMLElement | null>):
           el === document.activeElement,
       );
 
-    // Focus the first control if focus isn't already inside.
+
     if (!node.contains(document.activeElement)) focusable()[0]?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {

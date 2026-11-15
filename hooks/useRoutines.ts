@@ -1,4 +1,4 @@
-/** useRoutines — live view of saved routines (storage.sync). */
+
 
 import { useCallback, useEffect, useState } from 'react';
 import { getRoutines, onRoutinesChanged } from '../utils/routines';

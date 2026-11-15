@@ -1,4 +1,4 @@
-/** useWorkspaces — live workspace list + active id, with an atomic one-time Default seed. */
+
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -21,7 +21,7 @@ export function useWorkspaces(): UseWorkspaces {
   const [activeId, setActiveId] = useState<string | null>(null);
   const seeded = useRef(false);
 
-  // Read-only: safe to use as the change subscriber (never writes storage).
+
   const refresh = useCallback(async () => {
     const [list, active] = await Promise.all([getWorkspaces(), getActiveWorkspaceId()]);
     setWorkspaces(list);

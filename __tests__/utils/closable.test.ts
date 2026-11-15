@@ -54,10 +54,10 @@ describe('closeDuplicateTabs', () => {
       { url: 'https://a.test/', title: 'A3', pinned: true },
       { url: 'https://b.test/', title: 'B' },
     );
-    // Control center passes one URL per duplicate tab, so URLs can repeat.
+
     await closeDuplicateTabs(['https://a.test/', 'https://a.test/', 'https://b.test/']);
     expect(fake.tabs.map((t) => t.title).sort()).toEqual(['A3', 'B']);
-    // tabs.remove can reject an id it was already given, so each id goes once.
+
     const ids = remove.mock.calls.flatMap(([arg]) => (Array.isArray(arg) ? arg : [arg]));
     expect(new Set(ids).size).toBe(ids.length);
   });

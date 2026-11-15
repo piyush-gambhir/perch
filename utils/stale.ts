@@ -1,22 +1,22 @@
-/**
- * Pure helpers for proactive cleanup: detect tabs you haven't touched in a while
- * (via Chrome's tab.lastAccessed) and format short tab ages. No browser APIs.
- */
+
+
+
+
 
 import type { TabInfo } from './types';
 
 export const STALE_DAYS = 7;
 
-/** A tab is stale if it's inactive, unpinned, not already suspended, and untouched for `days`+. */
+
 export function isStale(t: TabInfo, now: number = Date.now(), days: number = STALE_DAYS): boolean {
   if (t.active) return false;
-  if (t.discarded) return false; // already suspended — leave it be
-  if (t.pinned) return false; // pinned = deliberately kept; never auto-stash or nag about it
+  if (t.discarded) return false;
+  if (t.pinned) return false;
   if (!t.lastAccessed) return false;
   return now - t.lastAccessed > days * 86_400_000;
 }
 
-/** All stale tabs, oldest first. */
+
 export function staleTabs(
   tabs: TabInfo[],
   now: number = Date.now(),
@@ -27,7 +27,7 @@ export function staleTabs(
     .sort((a, b) => (a.lastAccessed ?? 0) - (b.lastAccessed ?? 0));
 }
 
-/** Compact age label: "5m", "3h", "2d". Empty when unknown. */
+
 export function shortAge(ms?: number, now: number = Date.now()): string {
   if (!ms) return '';
   const days = Math.floor((now - ms) / 86_400_000);

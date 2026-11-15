@@ -1,8 +1,8 @@
-/**
- * Collision-free id generator. crypto.randomUUID() when available; otherwise a
- * monotonic counter combined with the timestamp so ids never collide even when many
- * are created within the same millisecond (e.g. bulk "save for later").
- */
+
+
+
+
+
 
 let counter = 0;
 

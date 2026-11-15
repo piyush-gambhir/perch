@@ -1,4 +1,4 @@
-/** One domain group rendered as a card: title, tab/dupe badges, chips, actions. */
+
 
 import { useState } from 'react';
 import { friendlyDomain } from '../utils/format';
@@ -48,7 +48,7 @@ export function DomainCard({
 
   const tabs = group.tabs || [];
   const tabCount = tabs.length;
-  // Close and Stash leave pinned tabs open, so they count and act on the rest only.
+
   const closableCount = closableTabs(tabs).length;
   const isLanding = group.domain === LANDING_PAGES_KEY;
   const isNative = group.groupId !== undefined && group.groupId >= 0;
@@ -63,7 +63,7 @@ export function DomainCard({
   const title = isLanding ? 'Homepages' : group.label || friendlyDomain(group.domain);
 
   const handleCloseGroup = () => {
-    // Only animate the card away when nothing (no pinned tab) will be left on it.
+
     if (closableCount < tabCount) {
       onCloseGroup(group);
       return;

@@ -56,7 +56,7 @@ describe('withLock', () => {
         order.push(`${tag}:end`);
       });
     await Promise.all([slow('a', 20), slow('b', 1)]);
-    // b must not start until a finishes (no interleaving).
+
     expect(order).toEqual(['a:start', 'a:end', 'b:start', 'b:end']);
   });
 

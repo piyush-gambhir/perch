@@ -1,8 +1,8 @@
-/**
- * Local export / import — a no-account escape hatch. Bundles all Perch data into a
- * JSON file the user can save and restore (or move between browsers). Nothing leaves
- * the device unless the user shares the file.
- */
+
+
+
+
+
 
 import { getSettings, saveSettings, type Settings } from './settings';
 import { loadSynced, mutateSynced } from './syncedStore';
@@ -12,8 +12,8 @@ const isStr = (v: unknown): v is string => typeof v === 'string';
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 type Raw = Record<string, unknown>;
 
-// Only schemes a restore can actually reopen; keeps javascript:/data:/chrome:// out
-// of stashes where a later tabs.create would choke on (or execute) them.
+
+
 const SAFE_SCHEMES = ['http:', 'https:', 'file:'];
 function isRestorableUrl(url: string): boolean {
   try {
@@ -23,7 +23,7 @@ function isRestorableUrl(url: string): boolean {
   }
 }
 
-/** Optional tags/note metadata, kept only when well-formed. */
+
 function validMeta(x: Raw): { tags?: string[]; note?: string } {
   return {
     ...(Array.isArray(x.tags) ? { tags: x.tags.filter(isStr) } : {}),
@@ -50,11 +50,11 @@ function validTabs(v: unknown): StashedTab[] {
     }));
 }
 
-/**
- * Valid named tab sets (stashes, routines, workspaces), reduced to the fields they
- * share. Each caller adds its own type-specific fields from `raw`, so nothing
- * unvalidated is copied into storage.
- */
+
+
+
+
+
 function validNamedSets(
   v: unknown,
 ): { base: Pick<Workspace, 'id' | 'name' | 'tabs' | 'tags' | 'note'>; raw: Raw }[] {
@@ -110,8 +110,8 @@ export async function exportAll(): Promise<Backup> {
   };
 }
 
-/** Validate + restore a backup. Each element is validated; malformed entries are
- *  dropped. Writes go through the locked store so they can't race other writers. */
+
+
 export async function importAll(raw: unknown): Promise<string> {
   if (!raw || typeof raw !== 'object') throw new Error('Not a Perch backup file.');
   const data = raw as Partial<Backup>;
@@ -132,7 +132,7 @@ export async function importAll(raw: unknown): Promise<string> {
     const routines: Routine[] = validNamedSets(data.routines).map(({ base, raw }) => ({
       ...base,
       createdAt: createdAt(raw),
-      // Same HH:MM shape the Routines schedule prompt accepts.
+
       ...(isStr(raw.schedule) && /^\d{2}:\d{2}$/.test(raw.schedule)
         ? { schedule: raw.schedule }
         : {}),
@@ -193,7 +193,7 @@ export async function importAll(raw: unknown): Promise<string> {
         hostname: rule.hostname as string,
         olderThanDays: rule.olderThanDays as number,
         action: rule.action as AutomationRule['action'],
-        // Missing means protect: a rule must opt in to touching pinned tabs.
+
         excludePinned: rule.excludePinned !== false,
       }));
     await mutateSynced<AutomationRule>('automationRules', () => rules);
@@ -202,7 +202,7 @@ export async function importAll(raw: unknown): Promise<string> {
   return counts.length ? `Imported ${counts.join(', ')}` : 'Nothing to import';
 }
 
-/** Trigger a download of the current backup as a .json file. */
+
 export async function downloadBackup(): Promise<void> {
   const data = await exportAll();
   downloadJson(

@@ -1,11 +1,11 @@
-/**
- * Workspaces — named tab contexts you switch between. The workspace list is synced;
- * the active-workspace id is local (it's about *this* device's current window).
- *
- * Switching: capture the current open tabs into the active workspace, then open the
- * target workspace's tabs and close the current ones. Because the current tabs are
- * saved into their workspace first, nothing is lost — switching back restores them.
- */
+
+
+
+
+
+
+
+
 
 import { browser } from 'wxt/browser';
 import { uid } from './id';
@@ -16,8 +16,8 @@ import type { StashedTab, Workspace } from './types';
 
 const WS_KEY = 'workspaces';
 const ACTIVE_KEY = 'activeWorkspace';
-// Tabs of the active workspace that failed to open when it was switched to. They never
-// reached the window, so the next capture must carry them or they would be lost.
+
+
 const UNOPENED_KEY = 'activeWorkspaceUnopened';
 
 export async function getWorkspaces(): Promise<Workspace[]> {
@@ -30,8 +30,8 @@ export async function createWorkspace(name: string, tabs: StashedTab[] = []): Pr
   return ws;
 }
 
-/** Create a "Default" workspace iff none exist — atomically, so concurrent contexts
- *  (multiple new-tab pages, StrictMode double-mount) can't seed duplicates. */
+
+
 export async function seedDefaultIfEmpty(): Promise<{
   list: Workspace[];
   seededId: string | null;
@@ -69,12 +69,12 @@ export async function setActiveWorkspaceId(id: string | null): Promise<void> {
   await browser.storage.local.set({ [ACTIVE_KEY]: id });
 }
 
-/**
- * Switch to a workspace, scoped to the CURRENT window: capture the current window's
- * tabs into the active workspace, close them, and open the target's tabs in that same
- * window. Serialized via a lock and reads tabs freshly, so rapid switches and
- * mid-load switches can't corrupt or lose data. Returns the target's name.
- */
+
+
+
+
+
+
 export async function switchWorkspace(targetId: string): Promise<string | null> {
   return withLock('perch-workspace-switch', async () => {
     const list = await getWorkspaces();
@@ -86,14 +86,14 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
     const win = await browser.windows.getCurrent();
     const winId = win?.id;
     const live = await browser.tabs.query(winId !== undefined ? { windowId: winId } : {});
-    // Pinned tabs are a deliberate keep: they stay open across every workspace, so
-    // they are neither captured nor closed (as in the dashboard's bulk actions).
+
+
     const real = live.filter((t) => t.url && !isInternalUrl(t.url) && !t.incognito && !t.pinned);
     const inWindow: StashedTab[] = real.map((t) => ({
       url: t.url as string,
       title: t.title || (t.url as string),
     }));
-    // Add back the active workspace's tabs that failed to open when it was switched to.
+
     const { [UNOPENED_KEY]: unopened } = (await browser.storage.local.get(UNOPENED_KEY)) as {
       [UNOPENED_KEY]?: { id: string; tabs: StashedTab[] };
     };
@@ -103,12 +103,12 @@ export async function switchWorkspace(targetId: string): Promise<string | null> 
       ...(unopened?.id === activeId ? unopened.tabs.filter((t) => !inWindowUrls.has(t.url)) : []),
     ];
 
-    // Save the current window into the active workspace BEFORE closing anything.
-    // An empty capture is saved too: keeping the old list would reopen tabs the user
-    // already closed the next time they switch back. The active id can be stale
-    // (workspace deleted on another device/page) or null; a plain map-update would
-    // silently drop the capture and the tabs would still be closed below, a permanent
-    // loss. Fall back to a recovery workspace instead, when there is anything to keep.
+
+
+
+
+
+
     if (activeId || captured.length > 0) {
       await mutateSynced<Workspace>(WS_KEY, (cur) => {
         if (activeId && cur.some((w) => w.id === activeId)) {

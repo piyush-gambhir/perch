@@ -1,9 +1,9 @@
-/**
- * Sessions ("stashes") and recently-closed undo, persisted in
- * browser.storage.local. A session is a named, restorable set of tabs; the undo
- * stack remembers the last few closes so they can be reopened. This is what makes
- * closing tabs *safe* — nothing is lost for good.
- */
+
+
+
+
+
+
 
 import { browser } from 'wxt/browser';
 import { reorderById } from './dnd';
@@ -18,10 +18,10 @@ const SESSIONS_KEY = 'sessions';
 const CLOSED_KEY = 'recentlyClosed';
 const CLOSED_LIMIT = 12;
 
-/** A tab Perch can save and later reopen: a real page, not a browser internal. */
+
 const isSavable = (t: { url: string }) => !!t.url && !isInternalUrl(t.url);
 
-/** Reduce live tabs to the minimal {url,title} we persist, skipping internals. */
+
 export function toStashedTabs(
   tabs: { url: string; title: string; pinned?: boolean }[],
 ): StashedTab[] {
@@ -30,18 +30,18 @@ export function toStashedTabs(
     .map((t) => ({ url: t.url, title: t.title || t.url, pinned: t.pinned || undefined }));
 }
 
-/**
- * The tabs a bulk stash or close may take: never pinned (a deliberate keep), and only
- * ones toStashedTabs saves, so a bulk action never closes a tab it did not save.
- */
+
+
+
+
 export function closableTabs<T extends { url: string; pinned?: boolean }>(tabs: T[]): T[] {
   return tabs.filter((t) => !t.pinned && isSavable(t));
 }
 
-/* ---- Sessions ---- */
+
 
 export async function getSessions(): Promise<Session[]> {
-  // Preserve stored order (newest is prepended on save; manual reorder persists).
+
   return loadSynced<Session>(SESSIONS_KEY);
 }
 
@@ -77,7 +77,7 @@ export async function updateSessionMeta(
   );
 }
 
-/** Append tabs to an existing session (used by drag-and-drop), de-duplicating by URL. */
+
 export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<void> {
   void recordHistory(tabs);
   await mutateSynced<Session>(SESSIONS_KEY, (list) =>
@@ -90,15 +90,15 @@ export async function addTabsToSession(id: string, tabs: StashedTab[]): Promise<
   );
 }
 
-/**
- * Append tabs to today's auto-stash session if one exists, else create it. Keeps the
- * hourly background job from spawning a new session every run.
- */
+
+
+
+
 export async function appendOrCreateSession(name: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
   void recordHistory(tabs);
   await mutateSynced<Session>(SESSIONS_KEY, (list) => {
-    // Match the auto-stash session by its flag + name, so a user-renamed stash can't collide.
+
     const existing = list.find((s) => s.auto && s.name === name);
     if (existing) {
       const seen = new Set(existing.tabs.map((t) => t.url));
@@ -117,11 +117,11 @@ export async function appendOrCreateSession(name: string, tabs: StashedTab[]): P
   });
 }
 
-/**
- * Open every tab in a session. Optionally in a new window, and/or remove after.
- * With `remove`, only tabs that are now open leave the stash; any that failed to
- * open stay in it, so a failed restore never loses them.
- */
+
+
+
+
+
 export async function restoreSession(
   id: string,
   opts: { remove?: boolean; newWindow?: boolean } = {},
@@ -130,14 +130,14 @@ export async function restoreSession(
   const session = sessions.find((s) => s.id === id);
   if (!session || session.tabs.length === 0) return { opened: 0, failed: 0 };
 
-  // Snapshot what we're restoring: the "remove" step below must only delete these,
-  // so tabs another context adds to the stash mid-restore aren't silently wiped.
+
+
   const restored = session.tabs;
 
   let result: Awaited<ReturnType<typeof openStashedTabs>>;
   if (opts.newWindow) {
-    // The window is created with the first tab; if that URL is unopenable (e.g. from
-    // an imported backup), fall back to an empty window and retry it with the rest.
+
+
     const [first, ...rest] = restored;
     if (!first) return { opened: 0, failed: 0 };
     let win: { id?: number } | undefined;
@@ -170,14 +170,14 @@ export async function restoreSession(
   return { opened: result.opened, failed: result.failed.length };
 }
 
-/** Reorder stashes by moving one before another (drag-to-reorder). */
+
 export async function reorderSessions(draggedId: string, targetId: string): Promise<void> {
   await mutateSynced<Session>(SESSIONS_KEY, (list) =>
     reorderById(list, draggedId, targetId, (s) => s.id),
   );
 }
 
-/* ---- Recently closed (undo) ---- */
+
 
 export async function getRecentlyClosed(): Promise<ClosedRecord[]> {
   const { recentlyClosed = [] } = (await browser.storage.local.get(CLOSED_KEY)) as {
@@ -186,7 +186,7 @@ export async function getRecentlyClosed(): Promise<ClosedRecord[]> {
   return recentlyClosed;
 }
 
-/** Record a close so it can be undone. Newest first, capped. */
+
 export async function pushClosed(label: string, tabs: StashedTab[]): Promise<void> {
   if (tabs.length === 0) return;
   void recordHistory(tabs);
@@ -197,12 +197,12 @@ export async function pushClosed(label: string, tabs: StashedTab[]): Promise<voi
   });
 }
 
-/**
- * Reopen a closed record's tabs and remove it from the undo stack. The lock is held
- * across the reopen, so a double-click or two Perch pages undoing at once can't
- * reopen everything twice, and the record only shrinks once its tabs actually
- * opened: any that failed stay in it for another try. Null when there is no record.
- */
+
+
+
+
+
+
 export async function restoreClosed(
   id: string,
 ): Promise<{ opened: number; failed: number } | null> {
@@ -220,7 +220,7 @@ export async function restoreClosed(
   });
 }
 
-/** Reopen the most recent close (the Undo button / Cmd+Shift+T equivalent). */
+
 export async function undoLastClose(): Promise<{ opened: number; failed: number } | null> {
   const existing = await getRecentlyClosed();
   if (existing.length === 0) return null;
@@ -229,7 +229,7 @@ export async function undoLastClose(): Promise<{ opened: number; failed: number 
   return restoreClosed(latest.id);
 }
 
-/** Subscribe to changes in either sessions (synced) or the undo stack (local). */
+
 export function onSessionsChanged(cb: () => void): () => void {
   const unsubSessions = onSyncedChanged(SESSIONS_KEY, cb);
   const listener = (changes: Record<string, unknown>, area: string) => {

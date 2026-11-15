@@ -1,4 +1,4 @@
-/** Drag-and-drop payload helpers for dragging a tab into a stash or saved list. */
+
 
 export const PERCH_TAB_MIME = 'application/x-perch-tab';
 
@@ -23,7 +23,7 @@ export function getDragTab(dt: DataTransfer): DragTab | null {
   }
 }
 
-/* ---- Dragging a stash row to reorder ---- */
+
 
 export const PERCH_SESSION_MIME = 'application/x-perch-session';
 
@@ -40,7 +40,7 @@ export function getDragSession(dt: DataTransfer): string | null {
   }
 }
 
-/** Move the item identified by draggedId to the position of targetId. Pure. */
+
 export function reorderById<T>(
   items: T[],
   draggedId: string,

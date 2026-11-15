@@ -1,7 +1,7 @@
-/**
- * useSettings — loads settings from storage.sync, applies the theme to the document,
- * and persists updates.
- */
+
+
+
+
 
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -33,7 +33,7 @@ export function useSettings(): UseSettings {
     };
   }, [refresh]);
 
-  // Apply the theme to the page whenever it changes.
+
   useEffect(() => {
     const root = document.documentElement;
     if (settings.theme === 'auto') root.removeAttribute('data-theme');

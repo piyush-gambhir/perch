@@ -51,12 +51,12 @@ export function tabsMatchingRule(
   });
 }
 
-/**
- * Tab ids a close-duplicates rule may close. Only rule-matched tabs are candidates;
- * other open copies of the same URL only prove that one survives. When every copy
- * matched, one is kept (pinned, then active, then the first). Pinned tabs are never
- * closed, as in closeDuplicateTabs.
- */
+
+
+
+
+
+
 export function duplicateIdsToClose(matches: TabInfo[], tabs: TabInfo[]): number[] {
   const matched = new Set(matches.map((tab) => tab.id));
   const ids: number[] = [];
