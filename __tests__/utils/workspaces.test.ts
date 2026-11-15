@@ -19,7 +19,7 @@ describe('switchWorkspace', () => {
     const b = await createWorkspace('B');
     await setActiveWorkspaceId(a.id);
 
-    // Every tab of A was closed before switching away.
+
     await switchWorkspace(b.id);
     expect(await tabsOf(a.id)).toEqual([]);
 

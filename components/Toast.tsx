@@ -1,5 +1,5 @@
-/** Toast notification with a tiny context so any component can call showToast().
- *  An optional action (e.g. Undo) renders an inline button. */
+
+
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { CheckCircleIcon } from './icons';
@@ -27,7 +27,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToast({ message, onAction, actionLabel });
     setVisible(true);
     if (timer.current) clearTimeout(timer.current);
-    // Give actionable toasts longer to be clicked.
+
     timer.current = setTimeout(() => setVisible(false), onAction ? 6000 : 2500);
   }, []);
 

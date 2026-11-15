@@ -1,4 +1,4 @@
-/** Right column: "Saved for Later" checklist + collapsible searchable archive. */
+
 
 import { useMemo, useState } from 'react';
 import { getDragTab, type DragTab } from '../utils/dnd';

@@ -1,4 +1,4 @@
-/** One tab "chip" inside a domain card: favicon, title, dupe badge, save/close. */
+
 
 import { useState } from 'react';
 import { setDragTab } from '../utils/dnd';
@@ -39,7 +39,7 @@ export function TabChip({
     hostname = parsed.hostname;
     if (parsed.hostname === 'localhost' && parsed.port) label = `${parsed.port} ${label}`;
   } catch {
-    /* ignore */
+
   }
   const favicon = faviconFor(tab.url, tab.favIconUrl);
 

@@ -1,10 +1,10 @@
-/**
- * useTabs — live view of open browser tabs.
- *
- * Fetches tabs + native tab groups, subscribes to tab and tab-group events, and
- * exposes the grouped/derived data the dashboard renders. The dashboard updates
- * automatically as tabs change.
- */
+
+
+
+
+
+
+
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
@@ -21,7 +21,7 @@ export interface UseTabs {
   refresh: () => Promise<void>;
 }
 
-// chrome.tabGroups may be absent in older browsers; guard access.
+
 const tabGroupEvents = (
   browser as unknown as {
     tabGroups?: {
@@ -59,7 +59,7 @@ export function useTabs(): UseTabs {
   useEffect(() => {
     refresh();
 
-    // Coalesce rapid event bursts (e.g. closing a group) into one refetch.
+
     const scheduleRefresh = () => {
       if (debounce.current) clearTimeout(debounce.current);
       debounce.current = setTimeout(refresh, 80);

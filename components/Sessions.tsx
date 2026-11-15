@@ -1,4 +1,4 @@
-/** Sidebar panel: stashed sessions — restore, rename, reorder, drop tabs in. */
+
 
 import { useState } from 'react';
 import { getDragSession, getDragTab, setDragSession, type DragTab } from '../utils/dnd';

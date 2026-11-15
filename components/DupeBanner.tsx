@@ -1,4 +1,4 @@
-/** Banner shown when more than one Perch new-tab page is open. */
+
 
 import { DuplicateIcon } from './icons';
 

@@ -1,7 +1,7 @@
-/**
- * Pure tab-grouping logic: bucket tabs by domain, pull out homepages, apply
- * custom group rules, and sort. No browser APIs — fully unit-testable.
- */
+
+
+
+
 
 import { CUSTOM_GROUPS, LANDING_PAGE_PATTERNS } from './config';
 import type {
@@ -15,7 +15,7 @@ import { LANDING_PAGES_KEY } from './types';
 
 export const TAB_GROUP_PREFIX = 'tabgroup:';
 
-/** True if the URL matches a homepage/landing-page rule. */
+
 export function isLandingPage(url: string, patterns: LandingPagePattern[] = LANDING_PAGE_PATTERNS) {
   try {
     const parsed = new URL(url);
@@ -36,7 +36,7 @@ export function isLandingPage(url: string, patterns: LandingPagePattern[] = LAND
   }
 }
 
-/** Return the first matching custom-group rule for a URL, or null. */
+
 export function matchCustomGroup(
   url: string,
   rules: CustomGroupRule[] = CUSTOM_GROUPS,
@@ -60,10 +60,10 @@ export function matchCustomGroup(
   }
 }
 
-/**
- * Group tabs into domain cards. Landing pages get their own card; file:// URLs
- * bucket under 'local-files'; custom rules can merge or split sites.
- */
+
+
+
+
 export function groupTabs(
   tabs: TabInfo[],
   opts: {
@@ -81,7 +81,7 @@ export function groupTabs(
 
   for (const tab of tabs) {
     try {
-      // Native Chrome tab group takes precedence over everything.
+
       if (tab.groupId !== undefined && tab.groupId >= 0 && nativeById.has(tab.groupId)) {
         const g = nativeById.get(tab.groupId)!;
         const key = `${TAB_GROUP_PREFIX}${g.id}`;
@@ -115,7 +115,7 @@ export function groupTabs(
         key = 'local-files';
       } else {
         const parsed = new URL(tab.url);
-        // Split local dev servers by port so different projects get their own card.
+
         key =
           parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
             ? parsed.host
@@ -126,7 +126,7 @@ export function groupTabs(
       const group = (groupMap[key] ??= { domain: key, tabs: [] });
       group.tabs.push(tab);
     } catch {
-      // Skip malformed URLs
+
     }
   }
 
@@ -145,7 +145,7 @@ export function groupTabs(
   const isNative = (d: string) => d.startsWith(TAB_GROUP_PREFIX);
 
   return Object.values(groupMap).sort((a, b) => {
-    // Native tab groups first, then Homepages, then landing-site domains, then by size.
+
     const aNative = isNative(a.domain);
     const bNative = isNative(b.domain);
     if (aNative !== bNative) return aNative ? -1 : 1;
@@ -162,12 +162,12 @@ export function groupTabs(
   });
 }
 
-/** Stable DOM-safe id for a group (used for card data attributes). */
+
 export function groupId(domain: string): string {
   return 'domain-' + domain.replace(/[^a-z0-9]/g, '-');
 }
 
-/** Count exact-URL duplicates within a group. */
+
 export function duplicateInfo(tabs: TabInfo[]) {
   const urlCounts: Record<string, number> = {};
   for (const tab of tabs) urlCounts[tab.url] = (urlCounts[tab.url] || 0) + 1;
@@ -181,7 +181,7 @@ export function duplicateInfo(tabs: TabInfo[]) {
   };
 }
 
-/** De-duplicate tabs by URL, preserving order (for display). */
+
 export function uniqueByUrl(tabs: TabInfo[]): TabInfo[] {
   const seen = new Set<string>();
   const out: TabInfo[] = [];

@@ -1,4 +1,4 @@
-/** Settings modal — theme, stale threshold, and data export/import. */
+
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';

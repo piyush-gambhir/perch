@@ -1,8 +1,8 @@
-/**
- * useDeferred — live view of the "Saved for Later" checklist, backed by
- * browser.storage.local. Subscribes to storage changes so the list stays in sync
- * across open Tab Out tabs.
- */
+
+
+
+
+
 
 import { useCallback, useEffect, useState } from 'react';
 import {

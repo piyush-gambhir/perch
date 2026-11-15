@@ -1,4 +1,4 @@
-/** Sidebar panel: routines — reusable named tab sets you open on demand. */
+
 
 import { useState } from 'react';
 import { timeAgo } from '../utils/format';

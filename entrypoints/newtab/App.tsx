@@ -1,4 +1,4 @@
-/** Perch dashboard — the new-tab page. Composes hooks + components. */
+
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette, type PaletteItem } from '../../components/CommandPalette';
@@ -101,13 +101,13 @@ const IS_MAC =
   /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
 const SEARCH_HINT = IS_MAC ? '⌘K' : 'Ctrl K';
 
-/** When this new-tab page was opened — a stable "now" for pure-render staleness math. */
+
 const PAGE_OPENED_AT = Date.now();
 
 const STALE_SNOOZE_KEY = 'staleSnoozedUntil';
 const DUPE_SNOOZE_KEY = 'dupeSnoozedUntil';
 
-/** Epoch ms for the end of today — a dismissed banner stays hidden until then. */
+
 function endOfToday(): number {
   const d = new Date();
   d.setHours(23, 59, 59, 999);
@@ -119,7 +119,7 @@ function formatFreed(n: number): string {
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 }
 
-/** Toast for a restore where some tabs could not open (their records are kept). */
+
 function failedToOpen(failed: number): string {
   return `Couldn't open ${failed} tab${failed !== 1 ? 's' : ''}. Kept for another try.`;
 }
@@ -146,8 +146,8 @@ function Dashboard() {
   const [selectMode, setSelectMode] = useState(false);
   const switchingRef = useRef(false);
 
-  // Dismissing a banner snoozes it until end of day, persisted so a fresh new-tab
-  // page doesn't resurrect a banner the user already waved off today.
+
+
   useEffect(() => {
     browser.storage.local
       .get([STALE_SNOOZE_KEY, DUPE_SNOOZE_KEY])
@@ -174,8 +174,8 @@ function Dashboard() {
   const greeting = useMemo(() => getGreeting(), []);
   const dateDisplay = useMemo(() => getDateDisplay(), []);
   const stale = useMemo(
-    // PAGE_OPENED_AT keeps render pure; against a multi-day staleness threshold,
-    // being minutes out of date is invisible, and tab events refresh realTabs anyway.
+
+
     () => staleTabs(realTabs, PAGE_OPENED_AT, settings.staleDays),
     [realTabs, settings.staleDays],
   );
@@ -192,8 +192,8 @@ function Dashboard() {
     setPaletteOpen(true);
   };
 
-  // Keyboard: Cmd/Ctrl+K or "/" opens the command palette. Suppressed while the
-  // welcome tour or settings modal is up — it would open underneath them.
+
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (firstRun.show || settingsOpen || controlOpen) return;
@@ -238,11 +238,11 @@ function Dashboard() {
   };
 
   const handleCloseGroup = async (group: DomainGroup) => {
-    // Pinned tabs stay open, as in Close all.
+
     const closable = closableTabs(group.tabs);
     if (closable.length === 0) return;
-    // Record the undo entry BEFORE closing: if closing fails halfway, the tabs that
-    // did close are still recoverable (mirrors the stash-then-close ordering).
+
+
     const stashed = toStashedTabs(closable);
     await pushClosed(groupLabel(group), stashed);
     await closeTabsByIds(idsOf(closable));
@@ -270,7 +270,7 @@ function Dashboard() {
   };
 
   const handleCloseAll = async () => {
-    // Pinned tabs are deliberately kept: "fresh start" shouldn't take them down.
+
     const closable = closableTabs(realTabs);
     const stashed = toStashedTabs(closable);
     await pushClosed(`${stashed.length} tabs`, stashed);
@@ -531,7 +531,7 @@ function Dashboard() {
       ].join(' '),
       run: () => handleSwitchWorkspace(workspace.id),
     }));
-    // Durable recall: pages Perch has held that aren't already shown above.
+
     const liveUrls = new Set<string>([
       ...realTabs.map((t) => t.url),
       ...deferred.active.map((d) => d.url),
@@ -551,7 +551,7 @@ function Dashboard() {
           run: () => openUrl(h.url),
         };
       });
-    // Verb actions — run a command straight from the palette.
+
     const actionItems: PaletteItem[] = [
       {
         id: 'act-stash-all',
@@ -621,9 +621,9 @@ function Dashboard() {
 
   const clearSelection = () => setSelected(new Set());
 
-  // A chip is shown once per URL (deduped), so a selected chip represents every open
-  // tab with that URL. Expand the selection to those tabs, minus pinned ones, which
-  // bulk actions never close (and so never stash or save either).
+
+
+
   const selectedUrlSet = (): Set<string> =>
     new Set(realTabs.filter((t) => t.id !== undefined && selected.has(t.id)).map((t) => t.url));
 
@@ -886,8 +886,8 @@ function Dashboard() {
         </div>
 
         <aside className="sidebar">
-          {/* Stashed and Saved for later stay mounted when empty: they are the drop
-              targets that create the first stash or saved tab by dragging. */}
+          {
+                                                                              }
           <Sessions
             sessions={sessions}
             onRestore={handleRestoreSession}

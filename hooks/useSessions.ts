@@ -1,7 +1,7 @@
-/**
- * useSessions — live view of stashed sessions and the recently-closed undo stack,
- * backed by browser.storage.local (synced across open Perch tabs).
- */
+
+
+
+
 
 import { useCallback, useEffect, useState } from 'react';
 import { getRecentlyClosed, getSessions, onSessionsChanged } from '../utils/sessions';

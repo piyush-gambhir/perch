@@ -12,9 +12,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Standard GitHub-hosted runners are free and unlimited on public repositories
-# (ubuntu-latest is 4 vCPU, 16 GB). The three checks run as parallel jobs so
-# the wall clock is the slowest one, not the sum.
+
+
+
 jobs:
   tasks:
     name: ${{ matrix.task }}
@@ -26,7 +26,7 @@ jobs:
         task: [typecheck, test, build]
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
         with:
           version: 12.15.0
       - uses: actions/setup-node@v7
@@ -46,9 +46,9 @@ jobs:
         if: matrix.task == 'build'
         run: pnpm exec wxt build
 
-  # The main branch ruleset requires a status check named "check". It reports the
-  # matrix result, and runs even when a task fails, because GitHub counts a
-  # skipped required check as passing.
+
+
+
   check:
     if: always()
     needs: tasks

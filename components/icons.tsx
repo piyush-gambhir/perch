@@ -1,4 +1,4 @@
-/** Inline SVG icons (Heroicons outline), as React components. */
+
 
 type IconProps = { className?: string };
 
@@ -205,7 +205,7 @@ export function PencilIcon({ className }: IconProps) {
   );
 }
 
-/** Perch's own bird-on-a-branch mark, inlined from public/icon/icon.svg. */
+
 export function PerchMark({ className }: IconProps) {
   return (
     <svg

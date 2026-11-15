@@ -1,7 +1,7 @@
-/**
- * Pure helpers for turning raw hostnames and tab titles into clean, human-friendly
- * display strings. No DOM or browser APIs — fully unit-testable.
- */
+
+
+
+
 
 import { FRIENDLY_DOMAINS } from './config';
 
@@ -10,7 +10,7 @@ export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-/** Map a hostname to a friendly name (e.g. "github.com" → "GitHub"). */
+
 export function friendlyDomain(hostname: string): string {
   if (!hostname) return '';
   if (FRIENDLY_DOMAINS[hostname]) return FRIENDLY_DOMAINS[hostname];
@@ -32,23 +32,23 @@ export function friendlyDomain(hostname: string): string {
     .join(' ');
 }
 
-/** Strip notification counts, email addresses, and "· X" suffix noise from a title. */
+
 export function stripTitleNoise(title: string): string {
   if (!title) return '';
-  // Leading notification count: "(2) Title"
+
   title = title.replace(/^\(\d+\+?\)\s*/, '');
-  // Inline counts like "Inbox (16,359)"
+
   title = title.replace(/\s*\([\d,]+\+?\)\s*/g, ' ');
-  // Email addresses (privacy + cleaner display)
+
   title = title.replace(/\s*[-‐-―]\s*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
   title = title.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
-  // X/Twitter formatting
+
   title = title.replace(/\s+on X:\s*/, ': ');
   title = title.replace(/\s*\/\s*X\s*$/, '');
   return title.trim();
 }
 
-/** Drop a trailing site-name suffix ("Some Article - GitHub" → "Some Article"). */
+
 export function cleanTitle(title: string, hostname: string): string {
   if (!title || !hostname) return title || '';
 
@@ -75,7 +75,7 @@ export function cleanTitle(title: string, hostname: string): string {
   return title;
 }
 
-/** Synthesize a readable title from the URL when the tab title is a bare URL. */
+
 export function smartTitle(title: string, url: string): string {
   if (!url) return title || '';
   let pathname = '';
@@ -129,12 +129,12 @@ export function smartTitle(title: string, url: string): string {
   return title || url;
 }
 
-/** Convenience: full title pipeline for a tab. */
+
 export function displayTitle(title: string, url: string, hostname = ''): string {
   return cleanTitle(smartTitle(stripTitleNoise(title || ''), url), hostname);
 }
 
-/** ISO date string → human-friendly relative time ("2 hrs ago"). */
+
 export function timeAgo(dateStr: string, now: Date = new Date()): string {
   if (!dateStr) return '';
   const then = new Date(dateStr);
@@ -158,7 +158,7 @@ export function getGreeting(now: Date = new Date()): string {
 }
 
 export function getDateDisplay(now: Date = new Date()): string {
-  // undefined locale → the user's own locale.
+
   return now.toLocaleDateString(undefined, {
     weekday: 'long',
     year: 'numeric',
@@ -167,7 +167,7 @@ export function getDateDisplay(now: Date = new Date()): string {
   });
 }
 
-/** Extract a clean hostname from a URL, stripping a leading "www." (empty on failure). */
+
 export function hostOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -176,13 +176,13 @@ export function hostOf(url: string): string {
   }
 }
 
-/**
- * Pick the src for a favicon <img> without any network request. On Chrome that is the
- * extension's `_favicon` endpoint, which serves the browser's own favicon cache. Firefox
- * has no such endpoint, so there only an inline data: favicon qualifies; a remote
- * favIconUrl is never loaded. Returns '' when nothing qualifies, and the caller shows
- * its fallback instead. `extensionUrl` is runtime.getURL, passed in to keep this pure.
- */
+
+
+
+
+
+
+
 export function faviconSrc(
   pageUrl: string,
   favIconUrl: string | undefined,
@@ -193,13 +193,13 @@ export function faviconSrc(
   return target.extensionUrl(`/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=32`);
 }
 
-/** Only allow safe link schemes; blocks javascript:/data: and other injection vectors. */
+
 export function safeHref(url: string): string {
   try {
     const u = new URL(url);
     if (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'file:') return url;
   } catch {
-    /* not a URL */
+
   }
   return '#';
 }

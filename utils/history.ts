@@ -1,11 +1,11 @@
-/**
- * Durable local memory — a searchable record of every tab Perch has held (closed,
- * stashed, or saved). Stored in IndexedDB (local, no permission, no sync quota) so
- * ⌘K can recall "that page from last week" long after the tab is gone.
- *
- * Keyed by URL so re-seeing a page just refreshes its timestamp. Capped so it can't
- * grow without bound.
- */
+
+
+
+
+
+
+
+
 
 import { isInternalUrl } from './tabs';
 import type { StashedTab } from './types';
@@ -51,7 +51,7 @@ function tx(db: IDBDatabase, mode: IDBTransactionMode) {
   return db.transaction(STORE, mode).objectStore(STORE);
 }
 
-/** Record tabs into history (deduped by URL, newest timestamp wins). Best-effort. */
+
 export async function recordHistory(tabs: { url: string; title: string }[]): Promise<void> {
   const entries = tabs.filter((t) => t.url && !isInternalUrl(t.url));
   if (entries.length === 0) return;
@@ -68,11 +68,11 @@ export async function recordHistory(tabs: { url: string; title: string }[]): Pro
     });
     void pruneHistory(db);
   } catch {
-    /* IndexedDB unavailable — history is a nice-to-have */
+
   }
 }
 
-/** Most-recently-seen entries, newest first. */
+
 export async function getRecentHistory(limit = 1500): Promise<HistoryEntry[]> {
   try {
     const db = await openDb();
@@ -96,7 +96,7 @@ export async function getRecentHistory(limit = 1500): Promise<HistoryEntry[]> {
   }
 }
 
-/** Drop oldest entries beyond MAX_ENTRIES. */
+
 async function pruneHistory(db: IDBDatabase): Promise<void> {
   try {
     const count = await new Promise<number>((resolve, reject) => {
@@ -108,7 +108,7 @@ async function pruneHistory(db: IDBDatabase): Promise<void> {
     let toDrop = count - MAX_ENTRIES;
     await new Promise<void>((resolve) => {
       const index = tx(db, 'readwrite').index('ts');
-      const cursorReq = index.openCursor(null, 'next'); // oldest first
+      const cursorReq = index.openCursor(null, 'next');
       cursorReq.onsuccess = () => {
         const cursor = cursorReq.result;
         if (cursor && toDrop > 0) {
@@ -122,11 +122,11 @@ async function pruneHistory(db: IDBDatabase): Promise<void> {
       cursorReq.onerror = () => resolve();
     });
   } catch {
-    /* ignore */
+
   }
 }
 
-/** Convert StashedTabs for recording. */
+
 export function toHistory(tabs: StashedTab[]): { url: string; title: string }[] {
   return tabs.map((t) => ({ url: t.url, title: t.title }));
 }

@@ -1,5 +1,5 @@
-/** Workspace switcher — pills for each tab context; click to switch, double-click (or
- *  the hover pencil) to rename, hover-x to delete (non-active). */
+
+
 
 import { useState } from 'react';
 import type { Workspace } from '../utils/types';

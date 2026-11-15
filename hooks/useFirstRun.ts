@@ -1,4 +1,4 @@
-/** useFirstRun — true until the user dismisses the welcome tour (stored locally). */
+
 
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';

@@ -1,4 +1,4 @@
-/** Proactive nudge: surfaces tabs untouched past the configured threshold. */
+
 
 import { ClockIcon } from './icons';
 

@@ -40,12 +40,12 @@ describe('chunkString / joinChunks', () => {
     expect(JSON.parse(joinChunks(chunkString(JSON.stringify(data), 7)))).toEqual(data);
   });
 
-  // storage.sync's 8KB/item quota is measured on the JSON-escaped UTF-8 bytes, so
-  // multi-byte chars and escapes must count at their stored size, not their length.
+
+
   const escapedBytes = (s: string) => new TextEncoder().encode(JSON.stringify(s)).length - 2;
 
   it('counts multi-byte characters at their UTF-8 size', () => {
-    const cjk = '日本語のタブ'.repeat(100); // 3 bytes/char
+    const cjk = '日本語のタブ'.repeat(100);
     const chunks = chunkString(cjk, 100);
     for (const c of chunks) expect(escapedBytes(c)).toBeLessThanOrEqual(100);
     expect(joinChunks(chunks)).toBe(cjk);
@@ -59,10 +59,10 @@ describe('chunkString / joinChunks', () => {
   });
 
   it('never splits a surrogate pair', () => {
-    const emoji = '😀😀😀😀😀'; // each is a 2-unit surrogate pair, 4 UTF-8 bytes
-    const chunks = chunkString(emoji, 5); // forces a boundary mid-run
-    for (const c of chunks) expect(c).toBe(joinChunks([...c])); // valid slices
+    const emoji = '😀😀😀😀😀';
+    const chunks = chunkString(emoji, 5);
+    for (const c of chunks) expect(c).toBe(joinChunks([...c]));
     expect(joinChunks(chunks)).toBe(emoji);
-    for (const c of chunks) expect(JSON.parse(JSON.stringify(c))).toBe(c); // round-trips JSON
+    for (const c of chunks) expect(JSON.parse(JSON.stringify(c))).toBe(c);
   });
 });

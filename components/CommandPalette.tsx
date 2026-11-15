@@ -1,5 +1,5 @@
-/** Cmd/Ctrl+K command palette — fuzzy search across open tabs, saved tabs, and
- *  stashed sessions; keyboard-driven jump / open / restore. */
+
+
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -12,9 +12,9 @@ export interface PaletteItem {
   subtitle: string;
   kind: 'tab' | 'saved' | 'session' | 'workspace' | 'history' | 'action';
   hostname?: string;
-  /** The page this item opens, used for its favicon. */
+
   url?: string;
-  /** The live tab's own cached favicon, when this item is an open tab. */
+
   favIconUrl?: string;
   searchText?: string;
   timestamp?: number;
@@ -37,7 +37,7 @@ const KIND_LABEL: Record<PaletteItem['kind'], string> = {
 };
 const PALETTE_OPENED_AT = Date.now();
 
-/** The item's local favicon, or the blank placeholder when there is none. */
+
 function PaletteFavicon({ item }: { item: PaletteItem }) {
   const src = item.url ? faviconFor(item.url, item.favIconUrl) : '';
   if (!src) return <span className="palette-favicon" />;
@@ -54,11 +54,11 @@ function PaletteFavicon({ item }: { item: PaletteItem }) {
 }
 
 function scoreMatch(haystack: string, query: string): number {
-  // Lower is better. -1 means no match.
+
   const h = haystack.toLowerCase();
   const idx = h.indexOf(query);
   if (idx !== -1) return idx;
-  // subsequence fallback
+
   let qi = 0;
   for (let i = 0; i < h.length && qi < query.length; i++) {
     if (h[i] === query[qi]) qi++;
@@ -78,8 +78,8 @@ export function CommandPalette({ open, onClose, items }: CommandPaletteProps) {
   const LIST_ID = 'palette-results';
   const optionId = (i: number) => `palette-option-${i}`;
 
-  // Async item.run() handlers can reject; swallow so a failure doesn't surface as an
-  // unhandled rejection (the palette closes regardless).
+
+
   const runItem = (item: PaletteItem) => {
     void Promise.resolve(item.run()).catch(() => {});
   };

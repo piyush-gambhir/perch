@@ -13,10 +13,10 @@ export async function getSnapshots(): Promise<Snapshot[]> {
   return Array.isArray(result.snapshots) ? result.snapshots : [];
 }
 
-/**
- * Every snapshot write is a read-modify-write of one list, done from both the page
- * and the service worker, so all of them run under this cross-context lock.
- */
+
+
+
+
 const mutateSnapshots = <T>(fn: () => Promise<T>) => withLock(`perch-store:${KEY}`, fn);
 
 export async function captureSnapshot(
@@ -70,7 +70,7 @@ export async function restoreSnapshot(id: string): Promise<number> {
     const missing = window.tabs.filter((tab) => !open.has(tab.url));
     if (!missing.length) continue;
     const created = await browser.windows.create({});
-    // openStashedTabs carries each tab's captured `pinned` flag; plain URLs would drop it.
+
     restored += (await openStashedTabs(missing, { windowId: created?.id })).opened;
     missing.forEach((tab) => open.add(tab.url));
   }

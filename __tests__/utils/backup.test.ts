@@ -16,7 +16,7 @@ vi.mock('wxt/browser', async () => ({ browser: (await import('../fakeBrowser')).
 
 beforeEach(() => resetFakeBrowser());
 
-/** Fill every store with data that uses all the metadata the types allow. */
+
 async function seed() {
   const tabs = [
     { url: 'https://a.test/', title: 'A', pinned: true, group: 'Work', tags: ['x'], note: 'n' },
@@ -42,7 +42,7 @@ async function seed() {
   });
 }
 
-/** A backup as it comes back from a .json file. */
+
 const asFile = <T>(value: T): unknown => JSON.parse(JSON.stringify(value));
 const withoutStamp = ({ exportedAt: _, ...rest }: Awaited<ReturnType<typeof exportAll>>) => rest;
 

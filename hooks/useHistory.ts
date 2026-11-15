@@ -1,4 +1,4 @@
-/** useHistory — recent durable-history entries for ⌘K recall. */
+
 
 import { useCallback, useEffect, useState } from 'react';
 import { getRecentHistory, type HistoryEntry } from '../utils/history';

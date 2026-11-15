@@ -1,7 +1,7 @@
-/**
- * Routines — reusable, named sets of tabs you open on demand (a "morning routine").
- * Unlike a stash, opening a routine does NOT consume it. Synced across devices.
- */
+
+
+
+
 
 import { browser } from 'wxt/browser';
 import { uid } from './id';
@@ -43,7 +43,7 @@ export async function setRoutineSchedule(id: string, schedule?: string): Promise
   );
 }
 
-/** Open every tab in a routine (non-destructive). */
+
 export async function openRoutine(id: string, opts: { newWindow?: boolean } = {}): Promise<void> {
   const routines = await getRoutines();
   const routine = routines.find((r) => r.id === id);

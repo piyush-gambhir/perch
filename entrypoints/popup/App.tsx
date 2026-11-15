@@ -1,4 +1,4 @@
-/** Toolbar popup — quick actions without opening a new tab. */
+
 
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
@@ -29,8 +29,8 @@ export function Popup() {
     }
   };
 
-  // Open the extension page explicitly. This still works when Chrome has temporarily
-  // disabled the global new-tab override because another extension owns it.
+
+
   const openDashboard = () =>
     run(async () => {
       await browser.tabs.create({ url: browser.runtime.getURL('/newtab.html') });
@@ -40,8 +40,8 @@ export function Popup() {
     run(async () => {
       const win = await browser.windows.getCurrent();
       const tabs = await browser.tabs.query({ windowId: win.id });
-      // Same rule as the dashboard's bulk actions: pinned tabs stay, and only tabs that
-      // get saved are closed. Incognito tabs never enter (synced) Perch storage.
+
+
       const stashable = closableTabs(
         tabs
           .filter((t) => t.id !== undefined && !t.incognito)

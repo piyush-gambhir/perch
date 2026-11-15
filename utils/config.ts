@@ -1,12 +1,12 @@
-/**
- * Static configuration: friendly domain names, landing-page rules, and custom
- * group rules. Replaces the old gitignored `config.local.js` globals with a
- * typed, importable module. Extend these arrays/maps to customize grouping.
- */
+
+
+
+
+
 
 import type { CustomGroupRule, LandingPagePattern } from './types';
 
-/** Map of known hostnames → friendly display names. */
+
 export const FRIENDLY_DOMAINS: Record<string, string> = {
   'github.com': 'GitHub',
   'www.github.com': 'GitHub',
@@ -76,10 +76,10 @@ export const FRIENDLY_DOMAINS: Record<string, string> = {
   'local-files': 'Local Files',
 };
 
-/**
- * Landing-page rules: URLs that should be pulled into the "Homepages" group so
- * they can be closed together without affecting deep-link tabs on the same site.
- */
+
+
+
+
 export const LANDING_PAGE_PATTERNS: LandingPagePattern[] = [
   {
     hostname: 'mail.google.com',
@@ -95,5 +95,5 @@ export const LANDING_PAGE_PATTERNS: LandingPagePattern[] = [
   { hostname: 'youtube.com', pathExact: ['/'] },
 ];
 
-/** Custom group rules: merge subdomains or split a site by path into its own card. */
+
 export const CUSTOM_GROUPS: CustomGroupRule[] = [];
